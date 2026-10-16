@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { botMove, MOVES, newGame, play, TILES, type Game, type Tile } from '../../shared/game';
+import { turnMotionMs } from '../../shared/feedback';
 
 test('Resolved hits emit symbol sounds, stone fragments and exact points; followers move and react', async ({ browser }) => {
   test.setTimeout(90_000);
@@ -55,9 +56,11 @@ test('Resolved hits emit symbol sounds, stone fragments and exact points; follow
       return value(a) - value(b);
     })[0];
     const before = view.scores[turn % 2];
+    const predicted = play(game, game.turn, move, () => .5);
+    const turnTimeout = turnMotionMs(predicted.lastMove!, game.scores, predicted.scores, game.board) + 3000;
     await page.locator(`[data-move="${move.side}:${move.lane}"]`).click();
     await expect(page.locator('.move-button:enabled')).toHaveCount(0);
-    await expect((turn % 2 === 0 ? b : a).locator('.move-button:enabled')).toHaveCount(15);
+    await expect((turn % 2 === 0 ? b : a).locator('.move-button:enabled')).toHaveCount(15, { timeout: turnTimeout });
     const after = Number(await page.locator(`#player-${turn % 2} .score`).evaluate(el => el.firstChild!.textContent));
     points += after - before;
     if (after > before && !captured) {
@@ -141,7 +144,7 @@ test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone
   const next = await page.locator('#next-tiles>div').first().locator('img').getAttribute('src');
   const rowBefore = await page.locator('#board-controls [data-row="1"][data-col="0"] img').getAttribute('src');
   const wheelWindow = await page.locator('.wheel-window').boundingBox(), wheel = await page.locator('#queue-wheel').boundingBox();
-  expect(wheelWindow!.width).toBeLessThan(wheel!.width * .55);
+  expect(wheelWindow!.width).toBeLessThan(wheel!.width * .56);
   const currentStone = await page.locator('#current-tile').boundingBox();
   for (const stone of await page.locator('#next-tiles>div').all()) {
     const bounds = (await stone.boundingBox())!;

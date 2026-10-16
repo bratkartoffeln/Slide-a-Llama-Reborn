@@ -89,11 +89,14 @@ export class BoardFeedback {
     popup.style.left = Math.max(65, Math.min(bounds.width - 65, centerX / frame.matches.length)) + 'px';
     popup.style.top = Math.max(45, centerY / frame.matches.length - 8) + 'px';
     popup.innerHTML = `<strong>+${frame.points}</strong>${frame.multiplier > 1 ? `<span class="combo-factor"><small>COMBO</small><b>×${frame.multiplier}</b></span>` : ''}`;
+    const delay = frame.multiplier > 1 ? FEEDBACK_TIMING.comboDelay : 0;
+    const factor = popup.querySelector<HTMLElement>('.combo-factor');
+    if (factor) factor.style.animationDelay = delay + 'ms';
     this.layer.append(popup);
-    this.animate(popup, [{ transform: 'translate(-50%,-30%) scale(.65)', opacity: 0 }, { transform: 'translate(-50%,-60%) scale(1.15)', opacity: 1, offset: .18 }, { transform: 'translate(-50%,-85%) scale(1)', opacity: 1, offset: .65 }, { transform: 'translate(-50%,-150%) scale(.95)', opacity: 0 }], 2000);
+    this.animate(popup, [{ transform: 'translate(-50%,-30%) scale(.65)', opacity: 0 }, { transform: 'translate(-50%,-60%) scale(1.15)', opacity: 1, offset: .18 }, { transform: 'translate(-50%,-85%) scale(1)', opacity: 1, offset: .65 }, { transform: 'translate(-50%,-150%) scale(.95)', opacity: 0 }], 2000, undefined, delay);
   }
-  private animate(element: HTMLElement, frames: Keyframe[], duration: number, done?: () => void) {
-    const animation = element.animate(frames, { duration, easing: 'ease-out' }); this.animations.add(animation);
+  private animate(element: HTMLElement, frames: Keyframe[], duration: number, done?: () => void, delay = 0) {
+    const animation = element.animate(frames, { duration, delay, fill: 'backwards', easing: 'ease-out' }); this.animations.add(animation);
     void animation.finished.then(() => done?.()).catch(() => {}).finally(() => { this.animations.delete(animation); element.remove(); });
   }
 }
