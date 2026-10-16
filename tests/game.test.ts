@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { newGame, insert, resolve, findMatches, play, lamaCounts, botMove, MOVES, type Board } from '../shared/game.js';
+import { newGame, push, insert, resolve, findMatches, play, lamaCounts, botMove, MOVES, type Board } from '../shared/game.js';
 
 const empty = (): Board => Array.from({ length: 5 }, () => Array(5).fill(null));
 test('Initial boards are full and contain no automatic matches, even with a constant RNG', () => {
@@ -26,6 +26,25 @@ test('Side insertion shifts the row in both directions and gravity settles stone
   assert.deepEqual(insert(board, 'bell', { side: 'right', lane: 4 })[4], ['lemon', 'grape', 'melon', 'seven', 'bell']);
   const fallen = insert(empty(), 'bell', { side: 'left', lane: 0 });
   assert.equal(fallen[4][0], 'bell'); assert.equal(fallen.flat().filter(Boolean).length, 1);
+});
+test('Side pushes stop at the first gap and never move disconnected stones', () => {
+  const board = empty();
+  board[4] = ['cherry', 'lemon', null, 'melon', 'seven'];
+  assert.deepEqual(insert(board, 'bell', { side: 'left', lane: 4 })[4], ['bell', 'cherry', 'lemon', 'melon', 'seven']);
+  assert.deepEqual(insert(board, 'bell', { side: 'right', lane: 4 })[4], ['cherry', 'lemon', 'melon', 'seven', 'bell']);
+  board[4] = [null, 'lemon', null, 'melon', null];
+  assert.deepEqual(insert(board, 'bell', { side: 'left', lane: 4 })[4], ['bell', 'lemon', null, 'melon', null]);
+  assert.deepEqual(insert(board, 'bell', { side: 'right', lane: 4 })[4], [null, 'lemon', null, 'melon', 'bell']);
+  assert.deepEqual(board[4], [null, 'lemon', null, 'melon', null]);
+});
+test('Top pushing also stops at the first gap before gravity settles the column', () => {
+  const board = empty();
+  const column = ['cherry', 'lemon', null, 'melon', 'seven'] as const;
+  column.forEach((tile, row) => { board[row][2] = tile; });
+  assert.deepEqual(push(board, 'bell', { side: 'top', lane: 2 }).map(row => row[2]), ['bell', 'cherry', 'lemon', 'melon', 'seven']);
+  board[0][2] = null;
+  assert.deepEqual(push(board, 'bell', { side: 'top', lane: 2 }).map(row => row[2]), ['bell', 'lemon', null, 'melon', 'seven']);
+  assert.deepEqual(insert(board, 'bell', { side: 'top', lane: 2 }).map(row => row[2]), [null, 'bell', 'lemon', 'melon', 'seven']);
 });
 test('Three, four and five in a line score once with ×1, ×2 and ×3 length bonuses', () => {
   for (const size of [3, 4, 5]) {

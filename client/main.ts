@@ -1,7 +1,9 @@
 import './style.css';
-import { fruit, llama, arrow } from './art';
+import './retro.css';
+import { fruit, llama, follower, arrow } from './art';
+import { GameAudio } from './sound';
 import { Connection, roomCode, type ConnectionStatus } from './network';
-import { newGame, lamaCounts, TILE_INFO, TILES, type Board, type Move, type Seat } from '../shared/game';
+import { newGame, push, insert, gravity, cloneBoard, lamaCounts, TILE_INFO, TILES, type Board, type Move, type Seat, type Tile } from '../shared/game';
 import type { Snapshot, ServerMessage, ChatMessage } from '../shared/protocol';
 declare const __APP_VERSION__: string;
 
@@ -13,14 +15,22 @@ let status: ConnectionStatus = 'idle';
 let clockOffset = 0, renderedRevision = -1, animationGeneration = 0, animating = false, movePending = false;
 let pendingMoveTimer: ReturnType<typeof setTimeout>;
 let sound = storage.get('lama:sound') === 'on';
-let audio: AudioContext | null = null;
+const audio = new GameAudio(); audio.setEnabled(sound);
+let retro = storage.get('lama:theme') === 'retro';
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let motionPreference = storage.get('lama:motion') !== 'off';
+const motionEnabled = () => motionPreference && !reducedMotion.matches;
+const activeAnimations = new Set<Animation>();
+document.body.dataset.theme = retro ? 'retro' : 'modern';
+audio.retro = retro;
+const tileName = (tile: Tile) => retro ? ({ cherry: 'Kirsche', lemon: 'Banane', grape: 'Pflaume', melon: 'Birne', bell: 'Glocke', seven: 'Sieben' })[tile] : TILE_INFO[tile].name;
 let chatMessages: ChatMessage[] = [], unread = 0;
 const chatDrafts = new Map<string, string>();
 const demo = newGame(() => 0.25);
 demo.board = [['cherry','melon','lemon','grape','seven'],['grape','cherry','lemon','bell','melon'],['lemon','grape','melon','cherry','bell'],['melon','bell','cherry','grape','lemon'],['cherry','lemon','grape','melon','cherry']];
 const app = $('app');
 app.innerHTML = `
-<header class="site-header"><a class="brand" href="/" aria-label="Slide-a-Llama Startseite"><img src="/favicon.svg" alt=""/><span>slide<span class="brand-dash">-a-</span>llama<small>REBORN · DAS DUELL IST ZURÜCK</small></span></a><nav><span class="connection"><i id="connection-dot"></i><span id="connection-label">Bereit für ein Duell</span></span><button class="icon-button" id="sound" aria-label="Ton einschalten" title="Ton einschalten">♪</button><button class="text-button" id="rules-open">So geht’s <span>↗</span></button></nav></header>
+<div class="retro-titlebar" aria-hidden="true"><span class="retro-flower"><img src="/retro/flower.svg" alt=""/></span><span>Slide-a-Llama · ICQ Games</span><span class="retro-window-buttons">─ ▢ ×</span></div><header class="site-header"><a class="brand" href="/" aria-label="Slide-a-Llama Startseite"><img class="modern-brand" src="/favicon.svg" alt=""/><img class="retro-brand" src="/retro/flower.svg" alt=""/><span>slide<span class="brand-dash">-a-</span>llama<small>REBORN · DAS DUELL IST ZURÜCK</small></span></a><nav><button class="theme-toggle" id="theme-toggle" aria-pressed="false">ICQ-Retro</button><button class="icon-button motion-toggle" id="motion-toggle" aria-label="Animationen ausschalten" title="Animationen ausschalten" aria-pressed="true">✦</button><span class="connection"><i id="connection-dot"></i><span id="connection-label">Bereit für ein Duell</span></span><button class="icon-button" id="sound" aria-label="Ton einschalten" title="Ton einschalten">♪</button><button class="text-button" id="rules-open">So geht’s <span>↗</span></button></nav></header>
 <main>
   <section class="intro"><div><p class="eyebrow"><span></span> DER KLASSIKER. WIEDER ZUSAMMEN.</p><h1>Kleine Steine.<br/><em>Große Rivalität.</em></h1><p class="intro-copy">Schiebe Früchte, entdecke Ketten und gewinne die Lamas.<br class="desktop-only"/> Ein Freund. Ein Spielfeld. Noch eine Runde.</p></div><div class="intro-art"><span class="art-sun"></span>${llama('#f3e8d0','#d57850','hero-llama')}<span class="art-caption">ALTE LIEBE.<br/>NEUES DUELL.</span><span class="art-spark">✳</span></div></section>
   <div class="play-heading"><div><span class="live-dot"></span><h2 id="table-heading">Dein Spieltisch</h2><span class="mode-badge" id="mode-badge">FRÜCHTE · 1 GEGEN 1</span></div><button class="text-button" id="leave" hidden>Raum verlassen ↗</button></div>
@@ -28,13 +38,13 @@ app.innerHTML = `
     <aside class="left-column">
       <section class="panel setup-panel" id="setup"><p class="eyebrow">GUT, DASS DU DA BIST</p><h3>Wer spielt mit?</h3><label for="name">Dein Name</label><input id="name" maxlength="20" autocomplete="nickname" placeholder="Zum Beispiel: Alex" value="${escape(storage.get('lama:name') ?? '')}"/><label for="turn-time">Zeit pro Zug</label><select id="turn-time"><option value="15">15 Sekunden · flott</option><option value="30" selected>30 Sekunden · entspannt</option><option value="60">60 Sekunden · mit Bedacht</option></select><button class="button primary" id="create">Freund einladen <span>↗</span></button><button class="button secondary" id="practice">Mit Paco üben <span>✧</span></button><div class="divider"><span>Du hast einen Raumcode?</span></div><form id="join-form"><label class="sr-only" for="room-input">Raumcode oder Einladungslink</label><div class="input-action"><input id="room-input" placeholder="Code oder Link" autocomplete="off"/><button type="submit" class="join-button" aria-label="Raum beitreten">${arrow('right')}</button></div></form><p class="small-note">Ohne Anmeldung. Direkt miteinander.</p></section>
       <section class="panel room-panel" id="room-panel" hidden><p class="eyebrow">DEIN PRIVATER RAUM</p><h3 id="room-title">Ein Platz für zwei.</h3><label for="invite-link">Einladungslink</label><input id="invite-link" readonly/><button class="button secondary" id="copy-link">Link kopieren <span>⧉</span></button><p class="room-code">Raumcode <strong id="room-code"></strong></p><p class="small-note" id="room-help">Schicke den Link an einen Freund. Sobald ihr beide da seid, geht’s los.</p><div class="room-stats"><span>RUNDE <b id="round">1</b></span><span>SIEGE <b id="wins">0 : 0</b></span></div></section>
-      <section class="panel points-panel"><div class="section-title"><h3>Jede Frucht zählt.</h3><span>3ER-REIHE</span></div><div class="points-grid">${TILES.map(t => `<div title="${TILE_INFO[t].name}: ${TILE_INFO[t].points} Punkte">${fruit(t)}<strong>${TILE_INFO[t].points}</strong></div>`).join('')}</div><p>4 gleiche = <b>×2</b> · 5 gleiche = <b>×3</b><br/>Jede weitere Kaskade erhöht den Faktor.</p></section>
+      <section class="panel points-panel"><div class="section-title"><h3>Jede Frucht zählt.</h3><span>3ER-REIHE</span></div><div class="points-grid">${TILES.map(t => `<div title="${tileName(t)}: ${TILE_INFO[t].points} Punkte">${fruit(t)}<strong>${TILE_INFO[t].points}</strong></div>`).join('')}</div><p>4 gleiche = <b>×2</b> · 5 gleiche = <b>×3</b><br/>Jede weitere Kaskade erhöht den Faktor.</p></section>
     </aside>
     <section class="arena" id="arena" aria-label="Spielfeld">
       <div id="reconnecting" class="reconnect-banner" role="status" hidden>Verbindung unterbrochen. Dein Platz bleibt reserviert; wir verbinden dich erneut …</div>
-      <div class="player-row"><div class="player player-zero" id="player-0"></div><div class="versus">VS</div><div class="player player-one" id="player-1"></div></div>
+      <div class="retro-game-caption" aria-hidden="true">SLIDE-A-LLAMA <small>CLASSIC FRUITS</small></div><div class="player-row"><div class="player player-zero" id="player-0"></div><div class="versus">VS</div><div class="player player-one" id="player-1"></div></div>
       <div class="turn-line"><span id="turn-label">Ein kleines Duell wartet auf dich.</span><span class="timer" id="timer">30<span>s</span></span></div><div class="timer-track"><span id="timer-fill"></span></div>
-      <div class="board-scene"><div class="temple-top"><span>◆</span><i></i><span>◆</span></div><div class="board-controls" id="board-controls"></div><div class="board-overlay" id="board-overlay"><span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere Paco heraus.</p></div></div>
+      <div class="board-scene"><img class="retro-temple" src="/retro/temple.png" alt="" draggable="false"/><div class="temple-top"><span>◆</span><i></i><span>◆</span></div><div class="board-controls" id="board-controls"></div><div class="board-overlay" id="board-overlay"><span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere Paco heraus.</p></div></div>
       <div class="tile-queue"><div class="current-tile"><span>JETZT</span><div id="current-tile"></div></div><div class="queue-separator">→</div><div class="next-tiles"><span>DANACH</span><div id="next-tiles"></div></div><div class="queue-hint" id="queue-hint">Einsetzen.<br/><strong>Überraschen.</strong></div></div>
       <div class="move-feedback" id="move-feedback" aria-live="polite">Drei gleiche Früchte. Ein ziemlich guter Anfang.</div>
       <div class="herd"><div class="herd-top"><span>DEINE LAMAS <b id="lamas-0">5</b></span><span><b id="lamas-1">5</b> GEGENSEITE</span></div><div id="herd-llamas" class="herd-llamas"></div><div class="lead-track"><span id="lead-fill"></span><i></i></div><p id="herd-caption">60 Punkte Vorsprung = ein Lama für dich.</p></div>
@@ -47,24 +57,39 @@ app.innerHTML = `
 </main>
 <footer><span>Ein bisschen früher. Ein bisschen besser.</span><span>SLIDE-A-LLAMA REBORN <b>v${__APP_VERSION__}</b></span></footer>
 <div id="toast" class="toast" role="status" hidden></div>
-<dialog id="rules"><button class="dialog-close" id="rules-close" aria-label="Schließen">×</button><p class="eyebrow">KURZ ERKLÄRT</p><h2>Schieben. Kombinieren.<br/><em>Lamas gewinnen.</em></h2><p>Ihr spielt abwechselnd auf demselben 5×5-Feld. Setze den aktuellen Stein mit einem der Pfeile von <b>oben, links oder rechts</b> ein. Ein voller Streifen schiebt den letzten Stein hinaus; anschließend fallen die Steine nach unten.</p><p>Mindestens drei gleiche Symbole in einer waagerechten oder senkrechten Reihe verschwinden. Vier zählen doppelt, fünf dreifach. Entsteht danach eine weitere Reihe, zählen ihre Punkte mit dem nächsten Kaskadenfaktor (×2, ×3, …). Leere Felder werden mit euren nächsten Zügen gefüllt.</p><p>Ihr startet mit je fünf Lamas. Je <b>60 Punkte Vorsprung</b> wechselt eines die Seite. Mit <b>300 Punkten Vorsprung</b> gewinnst du alle zehn und die Partie.</p><p>Nach Ablauf der Zugzeit wird dein Stein automatisch oben links eingesetzt. Bei Verbindungsabbruch pausiert die Partie für bis zu <b>120 Sekunden</b>. Danach gewinnt der verbliebene Spieler.</p><div class="keyboard-tip">Tastatur: <kbd>1</kbd>–<kbd>5</kbd> von oben · <kbd>Shift</kbd> + Zahl von links · <kbd>Alt</kbd> + Zahl von rechts</div><p class="small-note">Eigenständiger Früchte-Nachbau, inspiriert vom ICQ-Klassiker. Symbolhäufigkeiten und Punktewerte sind die Abstimmung dieser Version.</p><button class="button primary" id="rules-play">Alles klar, los geht’s</button></dialog>
+<dialog id="rules"><button class="dialog-close" id="rules-close" aria-label="Schließen">×</button><p class="eyebrow">KURZ ERKLÄRT</p><h2>Schieben. Kombinieren.<br/><em>Lamas gewinnen.</em></h2><p>Ihr spielt abwechselnd auf demselben 5×5-Feld. Setze den aktuellen Stein mit einem der Pfeile von <b>oben, links oder rechts</b> ein. Nur Steine mit direktem Kontakt werden mitgeschoben. An der ersten Lücke endet die Schiebekette; Steine dahinter bleiben stehen. Ist der Streifen lückenlos voll, fällt der letzte Stein hinaus. Anschließend wirkt die Schwerkraft.</p><p>Mindestens drei gleiche Symbole in einer waagerechten oder senkrechten Reihe verschwinden. Vier zählen doppelt, fünf dreifach. Entsteht danach eine weitere Reihe, zählen ihre Punkte mit dem nächsten Kaskadenfaktor (×2, ×3, …). Leere Felder werden mit euren nächsten Zügen gefüllt.</p><p>Ihr startet mit je fünf Lamas. Je <b>60 Punkte Vorsprung</b> wechselt eines die Seite. Mit <b>300 Punkten Vorsprung</b> gewinnst du alle zehn und die Partie.</p><p>Nach Ablauf der Zugzeit wird dein Stein automatisch oben links eingesetzt. Bei Verbindungsabbruch pausiert die Partie für bis zu <b>120 Sekunden</b>. Danach gewinnt der verbliebene Spieler.</p><div class="keyboard-tip">Tastatur: <kbd>1</kbd>–<kbd>5</kbd> von oben · <kbd>Shift</kbd> + Zahl von links · <kbd>Alt</kbd> + Zahl von rechts</div><p class="small-note">Eigenständiger Früchte-Nachbau, inspiriert vom ICQ-Klassiker. Symbolhäufigkeiten und Punktewerte sind die Abstimmung dieser Version.</p><button class="button primary" id="rules-play">Alles klar, los geht’s</button></dialog>
 <dialog id="confirm"><h2 id="confirm-title">Partie verlassen?</h2><p id="confirm-copy"></p><div class="confirm-buttons"><button class="button secondary" id="confirm-no">Weiterspielen</button><button class="button primary" id="confirm-yes">Bestätigen</button></div></dialog>`;
 
 function notify(message: string) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 6500); }
 let toastTimer: ReturnType<typeof setTimeout>;
-function ping() {
-  if (!sound) return;
-  try {
-    audio ??= new AudioContext(); void audio.resume();
-    for (const [i, freq] of [523.25, 659.25, 783.99].entries()) {
-      const osc = audio.createOscillator(), gain = audio.createGain(); osc.type = 'sine'; osc.frequency.value = freq;
-      const start = audio.currentTime + i * 0.07; gain.gain.setValueAtTime(0.06, start); gain.gain.exponentialRampToValueAtTime(0.001, start + 0.2);
-      osc.connect(gain); gain.connect(audio.destination); osc.start(start); osc.stop(start + 0.22);
-    }
-  } catch {}
-}
 function updateSound() { $('sound').classList.toggle('enabled', sound); $('sound').setAttribute('aria-label', sound ? 'Ton ausschalten' : 'Ton einschalten'); $('sound').title = sound ? 'Ton ausschalten' : 'Ton einschalten'; $('sound').setAttribute('aria-pressed', String(sound)); }
-$('sound').onclick = () => { sound = !sound; storage.set('lama:sound', sound ? 'on' : 'off'); updateSound(); ping(); }; updateSound();
+$('sound').onclick = () => { sound = !sound; storage.set('lama:sound', sound ? 'on' : 'off'); audio.setEnabled(sound); updateSound(); audio.play('chat'); }; updateSound();
+function applyPreferences() {
+  document.body.dataset.theme = retro ? 'retro' : 'modern'; audio.retro = retro;
+  document.body.classList.toggle('motion-off', !motionEnabled());
+  $('theme-toggle').setAttribute('aria-pressed', String(retro));
+  $('theme-toggle').title = retro ? 'Zum modernen Layout wechseln' : 'Zum ICQ-Retro-Layout wechseln';
+  $('motion-toggle').setAttribute('aria-pressed', String(motionEnabled()));
+  const label = reducedMotion.matches ? 'Animationen durch Systemeinstellung reduziert' : motionEnabled() ? 'Animationen ausschalten' : 'Animationen einschalten';
+  $('motion-toggle').setAttribute('aria-label', label); $('motion-toggle').title = label;
+  $<HTMLButtonElement>('motion-toggle').disabled = reducedMotion.matches;
+}
+function cancelVisuals() {
+  animationGeneration++; animating = false;
+  for (const animation of activeAnimations) animation.cancel();
+  activeAnimations.clear();
+}
+$('theme-toggle').onclick = () => {
+  retro = !retro; storage.set('lama:theme', retro ? 'retro' : 'modern'); cancelVisuals(); applyPreferences();
+  renderBoard(state?.game.board ?? demo.board); renderQueue(); renderPlayers(); renderHerd(); renderStatus(); renderChat();
+  document.querySelectorAll<HTMLElement>('.points-grid [title]').forEach((element, i) => { element.title = `${tileName(TILES[i])}: ${TILE_INFO[TILES[i]].points} Punkte`; });
+};
+$('motion-toggle').onclick = () => {
+  motionPreference = !motionPreference; storage.set('lama:motion', motionPreference ? 'on' : 'off');
+  cancelVisuals(); applyPreferences(); renderBoard(state?.game.board ?? demo.board); renderStatus();
+};
+reducedMotion.addEventListener('change', () => { cancelVisuals(); applyPreferences(); renderBoard(state?.game.board ?? demo.board); renderStatus(); });
+applyPreferences();
 const rules = $<HTMLDialogElement>('rules');
 $('rules-open').onclick = () => rules.showModal(); $('rules-close').onclick = $('rules-play').onclick = () => rules.close();
 rules.addEventListener('click', e => { if (e.target === rules) rules.close(); });
@@ -91,7 +116,8 @@ $('create').onclick = () => create(false); $('practice').onclick = () => create(
 $('join-form').onsubmit = event => { event.preventDefault(); const n = name(); if (!n) return; const room = roomCode($<HTMLInputElement>('room-input').value); if (!room) { notify('Gib den achtstelligen Raumcode oder den vollständigen Einladungslink ein.'); return; } connection.connect({ type: 'join', room, name: n }); };
 function reset() {
   document.body.classList.remove('in-room');
-  state = null; renderedRevision = -1; animationGeneration++; animating = false; movePending = false; chatMessages = []; chatDrafts.clear(); unread = 0;
+  cancelVisuals();
+  state = null; renderedRevision = -1; movePending = false; chatMessages = []; chatDrafts.clear(); unread = 0;
   history.replaceState({}, '', location.pathname); $('setup').hidden = false; $('room-panel').hidden = true; $('leave').hidden = true;
   $('result').hidden = true; $('resign').hidden = true; $('table-heading').textContent = 'Dein Spieltisch'; $('mode-badge').textContent = 'FRÜCHTE · 1 GEGEN 1';
   renderBoard(demo.board); renderPlayers(); renderQueue(); renderHerd(); renderChat(); renderStatus(); updateControls();
@@ -110,7 +136,7 @@ function receive(message: ServerMessage) {
     $<HTMLInputElement>('invite-link').value = url.href; $('room-code').textContent = message.room;
   } else if (message.type === 'snapshot') {
     const previous = state; state = message.state; clockOffset = state.serverTime - Date.now(); movePending = false; clearTimeout(pendingMoveTimer);
-    renderPlayers(); renderQueue(); renderHerd(); renderStatus();
+    renderPlayers(); renderQueue(); renderHerd(previous ? lamaCounts(previous.game.scores) : undefined); renderStatus();
     $('round').textContent = String(state.round); $('wins').textContent = state.wins.join(' : ');
     $('mode-badge').textContent = state.players[1]?.bot ? 'TRAINING MIT PACO' : `RAUM ${state.room}`;
     $('room-title').textContent = state.players[1]?.bot ? 'Paco nimmt die Herausforderung an.' : 'Ein Platz für zwei.';
@@ -120,16 +146,20 @@ function receive(message: ServerMessage) {
     document.querySelector<HTMLLabelElement>('label[for="invite-link"]')!.hidden = !!state.players[1]?.bot;
     $('room-code').parentElement!.hidden = !!state.players[1]?.bot;
     if (state.game.revision !== renderedRevision) {
-      const animate = previous && state.round === previous.round && state.game.lastMove && state.game.lastMove !== previous.game.lastMove && state.game.revision > renderedRevision;
+      const moved = previous && state.round === previous.round && state.game.lastMove && state.game.revision > previous.game.revision;
       renderedRevision = state.game.revision;
-      if (animate && state.game.lastMove!.frames.length && !matchMedia('(prefers-reduced-motion: reduce)').matches) void animateMove(state);
-      else { animationGeneration++; animating = false; renderBoard(state.game.board); }
-      if (state.game.lastMove && previous && state.game.lastMove.points > 0 && previous.game.revision !== state.game.revision) ping();
+      if (moved && motionEnabled()) void animateMove(state, previous.game.board);
+      else { cancelVisuals(); renderBoard(state.game.board); }
+      if (moved) audio.play(state.game.lastMove!.frames.length > 1 ? 'combo' : state.game.lastMove!.points > 0 ? 'match' : 'move');
+      if (previous && state.phase === 'finished' && previous.phase !== 'finished' && state.game.winner === state.you) {
+        audio.play('win'); animateElement($('result'), [{ transform: 'translateY(12px) scale(.96)', opacity: .4 }, { transform: 'none', opacity: 1 }], 500);
+      }
     }
     updateControls();
   } else if (message.type === 'chat') {
     for (const m of message.messages) if (m.seat === state?.you) chatDrafts.delete(m.requestId);
     const added = message.messages.filter(m => !chatMessages.some(old => old.id === m.id));
+    if (chatMessages.length && added.some(m => m.seat !== state?.you)) audio.play('chat');
     chatMessages = message.messages; renderChat(added.length);
   } else if (message.type === 'error') {
     if (message.requestId && chatDrafts.has(message.requestId)) {
@@ -157,7 +187,7 @@ function renderBoard(board: Board, matches: [number, number][] = []) {
     html += moveButton('left', r, r + 2, 1);
     for (let c = 0; c < 5; c++) {
       const t = board[r][c];
-      html += `<div class="tile ${t ?? 'empty'} ${matches.some(([mr, mc]) => mr === r && mc === c) ? 'matched' : ''}" data-row="${r}" data-col="${c}" style="grid-row:${r + 2};grid-column:${c + 2}" aria-label="Zeile ${r + 1}, Spalte ${c + 1}: ${t ? TILE_INFO[t].name : 'leer'}">${t ? fruit(t) : '<span>·</span>'}</div>`;
+      html += `<div class="tile ${t ?? 'empty'} ${matches.some(([mr, mc]) => mr === r && mc === c) ? 'matched' : ''}" data-row="${r}" data-col="${c}" style="grid-row:${r + 2};grid-column:${c + 2}" aria-label="Zeile ${r + 1}, Spalte ${c + 1}: ${t ? tileName(t) : 'leer'}">${t ? fruit(t) : '<span>·</span>'}</div>`;
     }
     html += moveButton('right', r, r + 2, 7);
   }
@@ -176,13 +206,56 @@ function renderBoard(board: Board, matches: [number, number][] = []) {
 function moveButton(side: Move['side'], lane: number, row: number, col: number) {
   return `<button class="move-button ${side}" data-move="${side}:${lane}" style="grid-row:${row};grid-column:${col}" aria-label="${side === 'top' ? 'Spalte' : 'Zeile'} ${lane + 1} von ${side === 'top' ? 'oben' : side === 'left' ? 'links' : 'rechts'} einschieben" disabled>${arrow(side === 'top' ? 'down' : side === 'left' ? 'right' : 'left')}</button>`;
 }
-async function animateMove(snapshot: Snapshot) {
+function animateElement(element: Element, frames: Keyframe[], duration: number) {
+  if (!motionEnabled()) return;
+  const animation = element.animate(frames, { duration, easing: 'cubic-bezier(.2,.7,.25,1)' });
+  activeAnimations.add(animation);
+  void animation.finished.catch(() => {}).finally(() => activeAnimations.delete(animation));
+}
+function fallingPieces(board: Board, duration: number) {
+  const height = $('board-controls').querySelector('.tile')!.getBoundingClientRect().height + (retro ? 2 : 5);
+  for (let c = 0; c < 5; c++) {
+    let target = 4;
+    for (let r = 4; r >= 0; r--) if (board[r][c]) {
+      if (target !== r) animateElement($('board-controls').querySelector(`[data-row="${target}"][data-col="${c}"]`)!, [{ transform: `translateY(${(r - target) * height}px)` }, { transform: 'none' }], duration);
+      target--;
+    }
+  }
+}
+async function animateMove(snapshot: Snapshot, previous: Board) {
   const generation = ++animationGeneration; animating = true;
+  const last = snapshot.game.lastMove!;
+  const pushed = push(previous, last.tile, last.move);
+  renderBoard(pushed);
+  const size = $('board-controls').querySelector('.tile')!.getBoundingClientRect().width + (retro ? 2 : 5);
+  const { side, lane } = last.move;
+  if (side === 'top') {
+    for (let r = 0; r < 5; r++) {
+      const cell = $('board-controls').querySelector(`[data-row="${r}"][data-col="${lane}"]`)!;
+      animateElement(cell, [{ transform: `translateY(-${size}px)` }, { transform: 'none' }], 160);
+      if (previous[r][lane] === null) break;
+    }
+  } else {
+    const from = side === 'left' ? 0 : 4, step = side === 'left' ? 1 : -1;
+    for (let c = from; c >= 0 && c < 5; c += step) {
+      animateElement($('board-controls').querySelector(`[data-row="${lane}"][data-col="${c}"]`)!, [{ transform: `translateX(${-step * size}px)` }, { transform: 'none' }], 160);
+      if (previous[lane][c] === null) break;
+    }
+  }
+  await new Promise(r => setTimeout(r, 165));
+  if (generation !== animationGeneration) return;
+  renderBoard(insert(previous, last.tile, last.move)); fallingPieces(pushed, 100);
+  await new Promise(r => setTimeout(r, 105));
   for (const frame of snapshot.game.lastMove!.frames) {
     if (generation !== animationGeneration) return;
     renderBoard(frame.board, frame.matches);
     $('move-feedback').textContent = `+${frame.points} Punkte${frame.multiplier > 1 ? ` · Kaskade ×${frame.multiplier}!` : ' · Gute Kombination!'}`;
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 180));
+    if (generation !== animationGeneration) return;
+    const cleared = cloneBoard(frame.board);
+    for (const [r, c] of frame.matches) cleared[r][c] = null;
+    const settled = cloneBoard(cleared); gravity(settled); renderBoard(settled); fallingPieces(cleared, 100);
+    await new Promise(r => setTimeout(r, 105));
   }
   if (generation !== animationGeneration) return;
   animating = false; renderBoard(snapshot.game.board); renderStatus();
@@ -207,13 +280,19 @@ function updateControls() {
 }
 function renderQueue() {
   const queue = state?.game.queue ?? demo.queue;
-  $('current-tile').innerHTML = fruit(queue[0]); $('next-tiles').innerHTML = queue.slice(1).map(t => `<div title="${TILE_INFO[t].name}">${fruit(t)}</div>`).join('');
-  $('current-tile').setAttribute('aria-label', 'Aktueller Stein: ' + TILE_INFO[queue[0]].name);
+  $('current-tile').innerHTML = fruit(queue[0]); $('next-tiles').innerHTML = queue.slice(1).map(t => `<div title="${tileName(t)}">${fruit(t)}</div>`).join('');
+  $('current-tile').setAttribute('aria-label', 'Aktueller Stein: ' + tileName(queue[0]));
 }
-function renderHerd() {
+function renderHerd(previous?: [number, number]) {
   const counts = lamaCounts(state?.game.scores ?? [0, 0]);
   $('lamas-0').textContent = String(counts[0]); $('lamas-1').textContent = String(counts[1]);
-  $('herd-llamas').innerHTML = Array.from({ length: 10 }, (_, i) => `<span class="mini-llama ${i < counts[0] ? 'team-zero' : 'team-one'}">${llama(i < counts[0] ? '#eee0c4' : '#d3e0d4', i < counts[0] ? '#ce7855' : '#5c8977')}</span>`).join('');
+  $('herd-llamas').innerHTML = Array.from({ length: 10 }, (_, i) => `<span class="mini-llama ${i < counts[0] ? 'team-zero' : 'team-one'}">${llama(i < counts[0] ? '#eee0c4' : '#d3e0d4', i < counts[0] ? '#ce7855' : '#5c8977')}${follower(i < counts[0] ? 0 : 1)}</span>`).join('');
+  if (previous && previous[0] !== counts[0]) {
+    audio.play('transfer');
+    $('herd-llamas').querySelectorAll('.mini-llama').forEach((element, i) => {
+      if ((i < counts[0]) !== (i < previous[0])) animateElement(element, [{ translate: `${counts[0] > previous[0] ? 35 : -35}px 0`, rotate: '-8deg' }, { translate: '0 -14px', rotate: '6deg', offset: .5 }, { translate: '0 0', rotate: '0deg' }], 650);
+    });
+  }
   $('lead-fill').style.width = `${counts[0] * 10}%`;
   const diff = state ? state.game.scores[0] - state.game.scores[1] : 0;
   $('herd-caption').textContent = diff ? `${state!.players[diff > 0 ? 0 : 1]?.name ?? 'Spieler'} führt mit ${Math.abs(diff)} Punkten · Noch ${60 - Math.abs(diff) % 60} bis zum nächsten Lama.` : '60 Punkte Vorsprung = ein Lama für dich.';

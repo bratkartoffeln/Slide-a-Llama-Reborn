@@ -1,6 +1,7 @@
 # Optional, separate DNS-01 proxy. No connection to the RPS network or volumes.
 services:
   caddy:
+    image: slide-a-lama-caddy:dynv6-zone-list-v1
     build: ./deploy/caddy-dynv6
     init: true
     restart: unless-stopped

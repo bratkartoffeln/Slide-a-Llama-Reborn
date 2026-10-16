@@ -1,4 +1,4 @@
-name: slide-a-llama
+name: slide-a-lama
 services:
   game:
     build: .

@@ -7,6 +7,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { newGame, play, botMove, validMove, type Game, type Seat, type Move } from '../shared/game.js';
 import { normalizeText, requestId, type Phase, type ServerMessage, type Snapshot } from '../shared/protocol.js';
 import { RoomChat } from './chat.js';
+import { DeploymentGuard } from './deploy-guard.js';
 
 const random = () => randomInt(0, 0x100000000) / 0x100000000;
 interface Player { name: string; token: string; socket: WebSocket | null; bot: boolean; rematch: boolean; reconnectUntil: number | null }
@@ -26,11 +27,13 @@ export async function startServer(options: ServerOptions = {}) {
   const root = resolve(options.staticDir ?? 'dist/client');
   const version = (JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { version: string }).version;
   let ready = true;
-  const mime: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
+  const deployment = new DeploymentGuard(() => rooms.size);
+  const mime: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2' };
   const http = createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+    if (deployment.handle(req, res)) return;
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); res.end(); return; }
     let pathname: string;
     try { pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname); }
@@ -121,7 +124,7 @@ export async function startServer(options: ServerOptions = {}) {
   }
   http.on('upgrade', (req, socket, head) => {
     const reject = (status: number) => { socket.end(`HTTP/1.1 ${status} Rejected\r\nConnection: close\r\n\r\n`); };
-    if (!ready || req.url !== '/ws' || connections.size >= 1000) { reject(503); return; }
+    if (!ready || deployment.active || req.url !== '/ws' || connections.size >= 1000) { reject(503); return; }
     const origin = req.headers.origin;
     try {
       if (options.allowedOrigins?.length ? !origin || !options.allowedOrigins.includes(origin) : origin && new URL(origin).host !== req.headers.host) { reject(403); return; }
@@ -146,6 +149,7 @@ export async function startServer(options: ServerOptions = {}) {
         const value: unknown = JSON.parse(raw.toString());
         if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Ungültige Nachricht.');
         data = value as Record<string, unknown>;
+        if (deployment.active) throw new Error('Ein Update wird installiert. Bitte gleich erneut versuchen.');
         if (!ctx.room) {
           if (data.type === 'create') {
             if (rooms.size >= 200) throw new Error('Alle Spieltische sind belegt. Versuche es später erneut.');

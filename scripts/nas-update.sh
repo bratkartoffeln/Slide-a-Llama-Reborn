@@ -4,8 +4,8 @@ set -eu
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$project_dir"
 case "${1:-}" in
-    lan) set -- -p slide-a-llama -f compose.yaml ;;
-    https) set -- -p slide-a-llama -f compose.yaml -f compose.https.yaml ;;
+    lan) set -- -p slide-a-lama -f compose.yaml ;;
+    https) set -- -p slide-a-lama -f compose.yaml -f compose.https.yaml ;;
     *) printf '%s\n' 'Usage: sh scripts/nas-update.sh lan|https' >&2; exit 2 ;;
 esac
 for required in package.json package-lock.json; do

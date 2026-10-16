@@ -1,3 +1,5 @@
 *
 !Dockerfile
 !entrypoint.sh
+!libdns-dynv6/
+!libdns-dynv6/**

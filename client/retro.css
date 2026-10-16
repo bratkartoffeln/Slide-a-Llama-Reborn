@@ -1,0 +1,173 @@
+/* Shared controls and art slots keep both themes on the same game state. */
+.retro-titlebar,.retro-game-caption,.retro-temple,.retro-art,.retro-follower,.retro-brand{display:none}
+.mini-llama .retro-follower{display:none}
+.theme-toggle{border:1px solid #aebba0;border-radius:6px;background:#eef1e5;color:#385d4b;padding:8px 11px;font-size:11px;font-weight:700;white-space:nowrap}
+.theme-toggle[aria-pressed=true]{background:#d6ef9d;border-color:#73932f;color:#263c15}
+.motion-toggle[aria-pressed=false]{text-decoration:line-through;color:#9b9e92}
+.tile-art{display:block;width:100%;height:100%;line-height:0}
+.tile .tile-art{width:82%;height:82%}.tile .tile-art svg{width:100%;height:100%}
+.points-grid .tile-art{width:30px;height:30px;margin:auto}
+.tile-art img{width:100%;height:100%;object-fit:contain}
+.current-tile .tile-art,.next-tiles .tile-art{width:100%;height:100%}
+.tile.matched{animation-duration:.18s}
+.tile.matched:after{content:'';position:absolute;inset:4%;border:2px solid #fff8ce;border-radius:50%;animation:bubble-pop .18s ease-out both;pointer-events:none}
+@keyframes bubble-pop{from{transform:scale(.2);opacity:1}to{transform:scale(1.35);opacity:0}}
+body.motion-off *,body.motion-off *:before,body.motion-off *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+
+body[data-theme=retro]{--ink:#17274a;--muted:#4a5260;--orange:#8b9a49;--line:#8b8a70;--paper:#f2efda;font-family:Tahoma,Verdana,sans-serif;background:#0860c5 url('/retro/landscape.png') center bottom/auto 100vh fixed no-repeat;color:var(--ink)}
+body[data-theme=retro] #app{max-width:1240px;margin:22px auto;border:2px solid #dceaa7;outline:1px solid #4f652d;box-shadow:5px 8px 0 #12325855;background:#e9e9d8}
+body[data-theme=retro] .retro-titlebar{display:flex;align-items:center;gap:8px;height:28px;padding:3px 7px;background:linear-gradient(#c5eb80,#74ad2a 52%,#8cc549 54%,#a7d466);border-bottom:1px solid #497125;color:#fff;font-weight:bold;font-size:12px;text-shadow:1px 1px #548228}
+.retro-flower{font-size:22px;color:#e3f093;text-shadow:1px 1px #254d10}.retro-window-buttons{margin-left:auto;color:#385a1f;letter-spacing:5px;font-size:14px}
+body[data-theme=retro] .site-header{height:62px;padding:0 20px;background:#e7e7d5;border-bottom:1px solid #90947d}
+body[data-theme=retro] .brand{font-family:Tahoma,sans-serif;font-size:24px;letter-spacing:-1px;color:#265b21}
+body[data-theme=retro] .brand img{width:32px;height:32px}
+body[data-theme=retro] .brand .modern-brand{display:none}
+body[data-theme=retro] .brand .retro-brand{display:block}
+.retro-flower img{display:block;width:20px;height:20px}
+body[data-theme=retro] .brand small{font-size:7px;letter-spacing:1.4px}.brand-dash{transition:color .2s}
+body[data-theme=retro] .brand-dash{color:#608b2d}
+body[data-theme=retro] .site-header nav{gap:14px}
+body[data-theme=retro] .connection{color:#315126}
+body[data-theme=retro] main{padding:18px;max-width:none;background:linear-gradient(#e9edda,#d9dfc5)}
+body[data-theme=retro] .intro,body[data-theme=retro] .how-strip{display:none}
+body[data-theme=retro] .game-layout{grid-template-columns:210px minmax(400px,1fr) 235px;gap:14px}
+body[data-theme=retro] .play-heading{margin:0 0 12px}.play-heading>div{min-width:0}
+body[data-theme=retro] .play-heading h2{font-family:Tahoma,sans-serif;font-size:14px}
+body[data-theme=retro] .mode-badge{background:#f4f3df;color:#52673c;border:1px inset #e5e7d5;letter-spacing:.6px}
+body[data-theme=retro] .panel{border:2px solid;border-color:#fffef3 #8f907c #8f907c #fffef3;border-radius:0;background:#e9e9d7;box-shadow:1px 1px #b9bea5}
+body[data-theme=retro] .setup-panel,body[data-theme=retro] .room-panel{padding:17px 14px}
+body[data-theme=retro] h3{font-family:Tahoma,Verdana,sans-serif;letter-spacing:0}
+body[data-theme=retro] .eyebrow{color:#657744;font-size:8px;letter-spacing:1px}
+body[data-theme=retro] .setup-panel h3,body[data-theme=retro] .room-panel h3{font-size:18px}
+body[data-theme=retro] input,body[data-theme=retro] select{border:2px solid;border-color:#808574 #fff #fff #808574;border-radius:0;background:#fffef0;color:#26374a;font-size:12px;padding:9px 8px}
+body[data-theme=retro] .button,body[data-theme=retro] .theme-toggle,body[data-theme=retro] .icon-button,body[data-theme=retro] .join-button,body[data-theme=retro] .quick-chat button{border:2px solid;border-color:#fffef1 #7a8169 #7a8169 #fffef1;border-radius:2px;background:linear-gradient(#f5f5e6,#d5d9be);color:#263b25;box-shadow:1px 1px #b3b59c;font-family:Tahoma,sans-serif}
+body[data-theme=retro] .button:not(:disabled):active,body[data-theme=retro] .theme-toggle:active{border-color:#7a8169 #fffef1 #fffef1 #7a8169}
+body[data-theme=retro] .primary{background:linear-gradient(#e1f1a8,#a6c766);font-weight:bold}
+body[data-theme=retro] .primary:hover:not(:disabled){background:#d1e89d}
+body[data-theme=retro] .secondary:hover:not(:disabled){background:#f6f6e8}
+body[data-theme=retro] .divider span{background:#e9e9d7;color:#727866}
+body[data-theme=retro] .small-note,body[data-theme=retro] .points-panel p{color:#667158}
+body[data-theme=retro] .points-panel{padding:15px 12px}
+body[data-theme=retro] .section-title h3{font-size:11px}.points-grid .tile-art svg{width:100%;height:100%}
+body[data-theme=retro] .points-grid{grid-template-columns:repeat(3,1fr);gap:12px 6px;margin:16px 0}
+body[data-theme=retro] .points-grid .tile-art{width:38px;height:44px}
+body[data-theme=retro] .points-grid strong{font-size:11px;margin-top:5px;color:#384c31}
+body[data-theme=retro] .modern-art{display:none}
+body[data-theme=retro] .retro-art{display:block}
+body[data-theme=retro] .arena{padding:14px 14px 12px;background:linear-gradient(#005dde 16%,#1568cf 32%,#ffe46a 65%,#f4d759 87%,#85a686);border:2px solid;border-color:#fff6ad #565632 #565632 #fff6ad;border-radius:0;box-shadow:inset 0 0 30px #004eba33;overflow:hidden}
+body[data-theme=retro] .retro-game-caption{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 12px;font-family:Impact,'Arial Black',sans-serif;font-size:27px;font-style:italic;letter-spacing:1px;color:#ffcd35;-webkit-text-stroke:1px #853515;text-shadow:2px 2px #fff3bb}
+.retro-game-caption small{font:7px Tahoma,sans-serif;letter-spacing:1px;color:#fcf2b6;-webkit-text-stroke:0;text-shadow:none}
+body[data-theme=retro] .player{border:2px solid #d8d8be;background:#3f4352;border-radius:2px;padding:5px;box-shadow:1px 1px #5b634a;gap:5px}
+body[data-theme=retro] .player.active{border-color:#ffef84;box-shadow:0 0 0 2px #ffd339}
+body[data-theme=retro] .avatar{display:none}
+body[data-theme=retro] .player-info>strong{font:italic 700 13px Tahoma,sans-serif;color:#ff594d;max-width:none}
+body[data-theme=retro] .player-one .player-info>strong{color:#aaa6ff}
+body[data-theme=retro] .player-info>span,body[data-theme=retro] .player-info>small{color:#ece8bd;font-size:6px;line-height:1.6}
+body[data-theme=retro] .score{color:#fff8d0;font-size:23px;letter-spacing:0;min-width:34px;text-align:right}
+body[data-theme=retro] .score small{color:#e6e7bd}
+body[data-theme=retro] .versus{color:#fffac7;font:bold 10px Tahoma,sans-serif;margin:0 4px}
+body[data-theme=retro] .turn-line{margin-top:12px;color:#fffce1;font-size:10px;text-shadow:1px 1px #235494}
+body[data-theme=retro] .your-turn{color:#fff3a1}
+body[data-theme=retro] .timer{color:#fff3a1;font-size:20px}
+body[data-theme=retro] .timer.urgent{color:#ffbba1}
+body[data-theme=retro] .timer-track{border:1px solid #d9e4a3;border-radius:0;background:#40578f;height:5px;margin:5px 0 8px}
+body[data-theme=retro] .timer-track span{background:#dbe986}
+body[data-theme=retro] .board-scene{padding:10px 0 22%;margin:0 -9px;background:none;border:0;border-radius:0;box-shadow:none;isolation:isolate}
+body[data-theme=retro] .retro-temple{display:block;position:absolute;inset:-8px 0 0;width:100%;height:100%;z-index:-1;pointer-events:none}
+body[data-theme=retro] .temple-top{display:none}
+body[data-theme=retro] .board-controls{margin:0 17%;gap:2px;grid-template-columns:19px repeat(5,minmax(0,1fr)) 19px;grid-template-rows:22px repeat(5,auto)}
+body[data-theme=retro] .tile{border:1px solid #cfc5a0;border-radius:2px;background:#fff4c9;box-shadow:1px 2px #b8a979;overflow:hidden}
+body[data-theme=retro] .tile .tile-art{width:100%;height:100%}
+body[data-theme=retro] .tile img{object-fit:fill}
+body[data-theme=retro] .tile.empty{background:#fff4c92b;border-color:#d5bf6133;box-shadow:none;color:#c0ad63}
+body[data-theme=retro] .tile.preview{background:#fff9a1;box-shadow:0 0 0 2px #fff8b0;transform:none}
+body[data-theme=retro] .tile.matched{background:#fff;animation-name:retro-hit}
+@keyframes retro-hit{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.45) rotate(10deg)}}
+body[data-theme=retro] .move-button{padding:1px;min-height:19px;border:1px solid #ffe482;border-radius:2px;box-shadow:0 2px #b18b23;color:#fff4b3;background:#c6a545}
+body[data-theme=retro] .move-button:not(:disabled){background:linear-gradient(#9dd8ff,#2b6bb1);border-color:#fff3ac;color:#fff5b9;box-shadow:0 2px #8b7928}
+body[data-theme=retro] .move-button:hover:not(:disabled){background:#f7db69;color:#29578a}
+body[data-theme=retro] .move-button svg{width:16px;height:16px}
+body[data-theme=retro] .board-overlay{inset:34px 23% 29%;border:2px solid #e7d18a;border-radius:2px;background:#fff4d5ef;padding:8px;backdrop-filter:none}
+body[data-theme=retro] .board-overlay h3{font-family:Tahoma,sans-serif;font-size:23px;font-weight:bold;color:#a75a24;line-height:1.1;margin:10px 0}
+body[data-theme=retro] .board-overlay p{color:#6d693f;font-size:9px}
+body[data-theme=retro] .overlay-tag{font-size:6px;letter-spacing:.5px;color:#8b7644}
+body[data-theme=retro] .tile-queue{position:relative;margin:-31px 10px 0;padding:8px 9px;background:#fff3c8dc;border:1px solid #d6b85f;gap:10px;border-radius:2px}
+body[data-theme=retro] .current-tile>span,body[data-theme=retro] .next-tiles>span{color:#6d6837;letter-spacing:1px}
+body[data-theme=retro] .current-tile>div{width:40px;height:44px;border-radius:2px;border:2px solid #ac8333;box-shadow:none}
+body[data-theme=retro] .next-tiles>div>div{width:30px;height:33px;border-radius:1px;border:1px solid #c0a765}
+body[data-theme=retro] .queue-hint{color:#7d6c2f;font-size:9px}.queue-hint strong{white-space:nowrap}
+body[data-theme=retro] .queue-hint strong{color:#9c5831;font-family:Tahoma,sans-serif;font-size:11px;font-style:normal}
+body[data-theme=retro] .move-feedback{color:#584d2b;font-size:10px;min-height:30px;padding-top:12px}
+body[data-theme=retro] .herd{border-top:1px solid #c3aa4b;padding:8px 0 0;margin-top:4px}
+body[data-theme=retro] .herd-top{color:#564b2c;letter-spacing:.6px;font-size:7px}
+body[data-theme=retro] .herd-top b{color:#7f342f}
+body[data-theme=retro] .mini-llama>.llama{display:none}
+body[data-theme=retro] .retro-follower{display:block;width:100%;height:64px}
+body[data-theme=retro] .herd-llamas{margin:4px -5px 0;align-items:flex-end}
+body[data-theme=retro] .mini-llama{width:10%}
+body[data-theme=retro] .lead-track{height:5px;border:1px solid #ada77a;border-radius:0;background:#5d64c6}
+body[data-theme=retro] .lead-track>span{background:#d85453}
+body[data-theme=retro] .herd p{color:#4c532f;font-size:9px}
+body[data-theme=retro] .resign{color:#414c2d;font-size:10px}
+body[data-theme=retro] .chat-panel{min-height:590px;padding:14px 12px}
+body[data-theme=retro] .chat-heading{padding:6px 7px;margin:-10px -8px 10px;background:linear-gradient(#def1a7,#a9c77c);border-bottom:1px solid #919b70}
+body[data-theme=retro] .chat-heading h3{font-size:12px;color:#365124}
+body[data-theme=retro] .chat-icon{color:#5c8035}
+body[data-theme=retro] .chat-subtitle{color:#6e775a;font-size:10px}
+body[data-theme=retro] .chat-messages{background:#fffef1;border:2px inset #d1d7be;padding:10px;height:365px}
+body[data-theme=retro] .chat-message p{border-radius:0;background:#edf2d8;border-color:#d1d7b9;color:#385027;font-size:12px}
+body[data-theme=retro] .chat-message.own p{border-radius:0;background:#e3ebfc;color:#314a76}
+body[data-theme=retro] .chat-meta{font-size:9px;color:#5d6650}
+body[data-theme=retro] .chat-compose{border:2px inset #d2d8be;border-radius:0;background:#fffef1}
+body[data-theme=retro] .chat-compose input{border:0;background:none;font-size:12px}
+body[data-theme=retro] .chat-compose button{background:#d7dfbd;color:#53683c;border-left:1px solid #a6b18a}
+body[data-theme=retro] .chat-footnote{color:#6a7758}
+body[data-theme=retro] .chat-empty>p,body[data-theme=retro] .chat-empty>span{color:#8b927a}
+body[data-theme=retro] .result{border:2px outset #fff4c2;background:#fff1b8;border-radius:0;color:#785022}
+body[data-theme=retro] footer{padding:12px 18px;margin:0;max-width:none;color:#6b7756;border-color:#a6b292}
+body[data-theme=retro] dialog{border:3px outset #e8e9d3;border-radius:0;box-shadow:5px 5px #1d355c66}
+body[data-theme=retro] dialog h2{font-family:Tahoma,sans-serif;font-size:24px}
+body[data-theme=retro] dialog h2 em{font-family:Tahoma,sans-serif;color:#537d2d}
+
+@media(max-width:1100px){
+ body[data-theme=retro] #app{margin:12px}
+ body[data-theme=retro] .game-layout{grid-template-columns:220px minmax(350px,1fr)}
+ body[data-theme=retro] .chat-panel{grid-column:1/-1;min-height:280px}
+ body[data-theme=retro] .chat-messages{height:170px}
+ body[data-theme=retro] .retro-follower{height:72px}
+}
+@media(max-width:680px){
+ .site-header{height:auto;min-height:110px;padding:14px 18px;flex-wrap:wrap;gap:12px}
+ .site-header nav{width:100%;justify-content:space-between;gap:8px}
+ .site-header .theme-toggle{font-size:11px;padding:7px 11px}
+ .site-header #rules-open{margin-left:auto}
+ .points-grid .tile-art{width:38px;height:38px}
+ body[data-theme=retro] #app{margin:0;border:0;outline:0;box-shadow:none}
+ body[data-theme=retro] .site-header{height:auto;min-height:106px;padding:12px 16px;gap:9px}
+ body[data-theme=retro] .site-header nav{gap:10px}
+ body[data-theme=retro] .retro-titlebar{font-size:11px;height:26px}
+ body[data-theme=retro] main{padding:15px 10px}
+ body[data-theme=retro] .game-layout{display:flex;gap:14px}
+ body[data-theme=retro] .setup-panel{display:grid;padding:17px 15px}
+ body[data-theme=retro] .arena{padding:12px 8px}
+ body[data-theme=retro] .retro-game-caption{font-size:25px;margin-bottom:12px}
+ body[data-theme=retro] .retro-game-caption small{display:none}
+ body[data-theme=retro] .player-info>strong{font-size:12px}
+ body[data-theme=retro] .player-info>small{font-size:6px}
+ body[data-theme=retro] .board-controls{margin:0 13%;grid-template-columns:21px repeat(5,minmax(0,1fr)) 21px}
+ body[data-theme=retro] .board-overlay{inset:34px 20% 29%}
+ body[data-theme=retro] .board-overlay h3{font-size:23px}
+ body[data-theme=retro] .tile-queue{margin:-20px 7px 0;padding:8px;gap:9px}
+ body[data-theme=retro] .current-tile>div{width:38px;height:41px}
+ body[data-theme=retro] .queue-hint{font-size:8px}
+ body[data-theme=retro] .queue-hint strong{font-size:10px}
+ body[data-theme=retro] .retro-follower{height:52px}
+ body[data-theme=retro] .chat-panel{min-height:300px;width:100%}
+ body[data-theme=retro] .chat-messages{height:200px}
+ body[data-theme=retro] .quick-chat button{font-size:10px}
+ body[data-theme=retro] .points-grid{grid-template-columns:repeat(6,1fr);gap:5px}
+ body[data-theme=retro] .points-grid .tile-art{width:33px;height:38px}
+ body[data-theme=retro] .points-panel p{font-size:10px}
+ body[data-theme=retro] .mode-badge{font-size:6px}
+ body[data-theme=retro] footer{font-size:8px;padding:14px}
+}

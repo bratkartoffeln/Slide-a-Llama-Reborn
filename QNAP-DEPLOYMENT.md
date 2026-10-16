@@ -4,10 +4,10 @@
 
 Vorlage: `F:\Daten\DEV\Games\RPS-Online-reborn`, untersucht am 16.10.2026.
 Ziel: `F:\Daten\DEV\Games\Slide-a-Llama-Reborn`.
-Version 0.1.1 enthält Anwendungscode, Paketdateien, Build und Tests.
+Version 0.1.2 enthält Anwendungscode, Paketdateien, Build und Tests.
 Browserclient und WebSocket-Server werden gemeinsam unter `dist/` gebaut.
-Lokaler Build und Multiplayerprüfungen sind erfolgreich; Dockerbuild und
-Live-NAS-/Porttest sind auf diesem Arbeitsrechner noch nicht bestätigt.
+Lokaler Anwendungsbuild und Multiplayerprüfungen sind erfolgreich. Der Caddy-
+Imagebuild und die NAS-HTTPS-Prüfung der dynv6-Korrektur sind unten dokumentiert.
 
 Der Node-24-Dockerfile verwendet folgenden implementierten Vertrag:
 
@@ -32,18 +32,18 @@ Der Früchte-Modus ist implementiert; Regeln und Abweichungen stehen in
 
 | Ressource | Bestehendes RPS laut Repository | Slide-a-Llama, vorgeschlagen |
 | --- | --- | --- |
-| Compose-Projekt | rps-arena | slide-a-llama |
+| Compose-Projekt | rps-arena | slide-a-lama |
 | NAS-Verzeichnis | /share/Container/rps-arena/rps-remake | /share/Container/slide-a-llama/app |
 | Spielport auf NAS | 2567 | 2568 |
 | HTTPS-Port auf NAS | 18443 | 19943 |
 | Öffentlicher TCP-Port | 8443 | 9443, vorher prüfen |
 | Proxyziel intern | rps:2567 | game:2568 |
 | Domain | flusensieb.dns.navy | flusensieb.dns.navy |
-| Netzwerk | rps-arena_default | slide-a-llama_default |
-| Zertifikats-Volumes | rps-arena_caddy_data/config | slide-a-llama_caddy_data/config |
+| Netzwerk | rps-arena_default | slide-a-lama_default |
+| Zertifikats-Volumes | rps-arena_caddy_data/config | slide-a-lama_caddy_data/config |
 
-Container heißen standardmäßig `slide-a-llama-game-1` und
-`slide-a-llama-caddy-1`. Keine globalen Container-Namen oder externen Netzwerke.
+Container heißen standardmäßig `slide-a-lama-game-1` und
+`slide-a-lama-caddy-1`. Keine globalen Container-Namen oder externen Netzwerke.
 Das neue Caddy-Image bleibt Compose-projektbezogen. RPS-Dateien, DNS, Token,
 Volumes und laufende Container werden nicht geändert oder eingebunden.
 Die Werte sind anhand der Vorlagendateien getrennt; Belegung durch weitere
@@ -64,7 +64,7 @@ RPS-Verzeichnisse überschreiben. `docker ps --format 'table {{.Names}}\t{{.Port
 und die QNAP-Portbelegung prüfen; nötigenfalls freie Ports in `.env` setzen.
 Compose v2.29.1 ist laut RPS-Anleitung auf dem NAS vorhanden; tatsächlich mit
 `docker compose version` bestätigen. Alle Befehle über die hier mitgelieferten
-Skripte oder explizit mit **`-p slide-a-llama`** ausführen.
+Skripte oder explizit mit **`-p slide-a-lama`** ausführen.
 
 ```sh
 cp .env.example .env
@@ -92,15 +92,15 @@ direkten LAN-Zugriff braucht, kann `SLIDE_LAN_BIND=127.0.0.1` setzen.
 5. Erst prüfen und bauen:
 
 ```sh
-docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml config --quiet
-docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml build
+docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml config --quiet
+docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml build
 ```
 
 Optional vor dem Start die Caddy-Konfiguration prüfen (verwendet den echten
 lokalen Token, gibt ihn nicht aus; stellt noch kein Zertifikat aus):
 
 ```sh
-docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 ```
 
 Dann `sh scripts/nas-update.sh https` ausführen. Als neue IPv4-Routerfreigabe
@@ -113,8 +113,8 @@ sind erforderlich. DNS-01 prüft über TXT bei dynv6; der Browserzugang benötig
 trotzdem die genannte Portfreigabe.
 
 ```sh
-docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml ps
-docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml logs --tail=100 game caddy
+docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml ps
+docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml logs --tail=100 game caddy
 ```
 
 Über Mobilfunk die neue HTTPS-Adresse und `/ready` ohne Zertifikatswarnung
@@ -153,14 +153,9 @@ enthält die versionierten Dateien; `.env` und `secrets/` niemals einchecken.
 Dieser Paketworkflow ist nur manuell ausführbar. Zusätzlich prüft `verify.yml`
 bei Push und PR Regeln, WebSocket-Multiplayer, Browserbedienung und Produktionsimage.
 
-Der RPS-Workflow `deploy-request.yml` wartet auf `qnap-manual`-Deployment-
-Bestätigungen eines alle fünf Minuten laufenden NAS-Pollers. Dessen Installation
-und Quellcode liegen nicht in der untersuchten RPS-Vorlage. Er wurde daher
-nicht übernommen oder umkonfiguriert. Für eine spätere automatische Übernahme
-werden der echte NAS-Poller, separate Pfade/Locks/Repository-Zuordnung und dessen
-Berechtigungen benötigt. Dafür wäre ein eigenes, nur auf das Ziel-Repository
-beschränktes NAS-GitHub-Secret einzurichten. Aktuell gibt es keinen automatischen
-NAS-Deploy und keinen Bedarf für einen persönlichen GitHub-Token in den Dateien.
+Der separate Slide-a-Llama-Autoupdater ist auf QNAS1 eingerichtet. Einrichtung,
+GitHub-Token, manueller Deployment-Knopf und Status: [QNAP-AUTOUPDATE.md](QNAP-AUTOUPDATE.md).
+RPS-Updater und RPS-Cron bleiben unverändert.
 
 ## Lokale Prüfung bei der Einrichtung
 
@@ -186,3 +181,40 @@ noch auszuführenden Schritte, keine bereits bestätigten Ergebnisse.
 - Lokale RPS-Dateien: Dockerfile, compose.yaml, compose.dns.yaml,
   Caddyfile.dns, deploy/caddy-dynv6/, scripts/setup-dynv6-token.sh,
   .github/workflows/deploy-request.yml, QNAP-HTTPS.md und QNAP-UPDATE.md.
+
+## dynv6-Zonenabfrage korrigiert
+
+Das Slide-a-Llama-Caddy-Image `slide-a-lama-caddy:dynv6-zone-list-v1` verwendet
+einen lokal beigelegten libdns/dynv6-v1.1.1-Provider mit gezielter Korrektur:
+`GET /api/v2/zones` liefert die Zone und ihre numerische ID, statt des auf
+diesem Anschluss mit HTTP 404 fehlschlagenden `/zones/by-name/`-Aufrufs.
+Tests im Imagebuild prüfen die Zonenauflösung ohne echte Tokens oder DNS-Schreibzugriffe.
+Quellherkunft und Lizenz stehen in `deploy/caddy-dynv6/libdns-dynv6/`.
+Nur das neue Projekt verwendet dieses Image; RPS bleibt auf seinem bisherigen Stand.
+
+### Bestätigung am 16.10.2026
+
+Das korrigierte Caddy-Image wurde auf QNAS1 gebaut; die isolierten Go-Tests
+und `caddy validate` sind erfolgreich. DNS-01 und die Ausstellung eines
+öffentlichen Let's-Encrypt-Zertifikats sind abgeschlossen.
+
+Die öffentliche IPv4-Adresse auf Port 9443 liefert sowohl die Spielseite
+(Titel: Slide-a-Lama — Das Duell ist zurück.) als auch `/ready` mit HTTP 200
+und vollständig geprüfter TLS-Verbindung. Bestätigt vom NAS und vom PC.
+Das Zertifikat ist bis 14.01.2027 gültig; Caddy übernimmt die Erneuerung.
+Der unverändert laufende Spielcontainer meldet Version 0.1.0. Die lokale
+Projektversion 0.1.2 enthält die Infrastrukturkorrektur für spätere Builds.
+
+RPS antwortet weiterhin auf Port 8443 mit HTTP 200 und gültigem TLS
+(Version 0.4.30). IDs, Images und Startzeiten beider RPS-Container und des
+Slide-Spielcontainers wurden vor/nach der Caddy-Umstellung verglichen und
+sind gleich geblieben. Nur der Slide-Caddy wurde ersetzt.
+
+IPv6-Port 9443 wird weiterhin abgewiesen. Die gemeinsame Domain und deren
+DNS-Einträge wurden nicht geändert. Für vollständigen IPv6-Betrieb ist eine
+separat geprüfte IPv6-Freigabe/Portkonfiguration erforderlich; die IPv4-
+Portumleitung allein stellt diese nicht her.
+
+Die vorherigen Caddy-Builddateien und die HTTPS-Compose-Datei liegen auf dem
+NAS unter `/share/homes/sebastian/.cache/slide-a-llama-caddy/20261016T090402Z/`.
+Das bisherige Caddy-Image und die Zertifikats-Volumes wurden erhalten.

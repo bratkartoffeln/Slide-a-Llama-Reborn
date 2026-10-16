@@ -9,9 +9,17 @@ export function fruit(tile: Tile): string {
     bell: '<circle cx="32" cy="12" r="5" fill="#ba7d2b"/><circle cx="32" cy="49" r="6" fill="#ba7d2b"/><path d="M14 44c9-7 0-27 18-27s9 20 18 27l3 3H11Z" fill="#eab94c"/><path d="M24 24q-4 7-4 13" fill="none" stroke="#fff0aa" stroke-width="5" stroke-linecap="round"/><path d="M12 46h40" stroke="#c98b32" stroke-width="4" stroke-linecap="round"/>',
     seven: '<path d="M13 13h40v9L34 54H19l20-29H13Z" fill="#c8553e"/><path d="M17 17h31" stroke="#ffb091" stroke-width="4" stroke-linecap="round"/><path d="m25 36 19-1" stroke="#f5d4a3" stroke-width="4"/>'
   };
-  return svg(art[tile], 'fruit');
+  const originals: Record<Tile, string> = { cherry: 'cherry', lemon: 'banana', grape: 'plum', melon: 'pear', bell: 'bell', seven: 'seven' };
+  return `<span class="tile-art">${svg(art[tile], 'fruit modern-art')}<img class="retro-art" src="/retro/${originals[tile]}.png" alt="" draggable="false"/></span>`;
 }
 export function llama(color = '#eedfc3', accessory = '#d5754e', cls = ''): string {
   return `<svg class="llama ${cls}" viewBox="0 0 160 180" aria-hidden="true"><path d="M34 160q-9-30 5-50V75q-12-21-8-50 18-6 25 33l22-2q3-38 19-37 13 22-2 54l6 35q31 3 28 31l-4 23h-19l-4-17H67l-5 17Z" fill="${color}" stroke="#384e40" stroke-width="3" stroke-linejoin="round"/><path d="M40 34q7 2 10 24m38-24-5 21" stroke="#dca692" stroke-width="7" stroke-linecap="round"/><path d="M46 67q18-10 44 0l-2 21q-24 12-44-1Z" fill="#fbf2df"/><ellipse cx="66" cy="88" rx="21" ry="13" fill="#d9c4a7"/><circle cx="51" cy="73" r="3.5" fill="#304c40"/><circle cx="79" cy="73" r="3.5" fill="#304c40"/><path d="m60 86 6 4 6-4m-6 4v5" fill="none" stroke="#304c40" stroke-width="2.5" stroke-linecap="round"/><path d="M38 104q23 17 62-2l4 15q-39 19-66 0Z" fill="${accessory}"/><path d="m78 116 11 30 12-8-9-24" fill="${accessory}"/><path d="m41 161-2 9h22l1-9m44 1 1 8h21l-3-9" fill="#384e40"/><path d="M129 133q14-2 10-15" stroke="#384e40" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`;
+}
+let followerId = 0;
+export function follower(team: 0 | 1): string {
+  const id = `retro-team-${followerId++}`;
+  // Recolour only the blue clothing; the original face and outlines stay intact.
+  const red = `<defs><filter id="${id}" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -1 0 1 0 0" result="blue"/><feComponentTransfer in="blue" result="mask"><feFuncA type="linear" slope="8" intercept="-.5"/></feComponentTransfer><feColorMatrix in="SourceGraphic" type="matrix" values="0 .1 .9 0 0  .2 0 0 0 0  .6 0 0 0 0  0 0 0 1 0" result="red"/><feComposite in="red" in2="mask" operator="in" result="clothing"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="clothing"/></feMerge></filter></defs>`;
+  return `<svg class="retro-follower team-${team}" viewBox="60 55 100 135" aria-hidden="true">${team === 0 ? red : ''}<image href="/retro/follower.png" width="757" height="270" ${team === 0 ? `filter="url(#${id})"` : ''}/></svg>`;
 }
 export const arrow = (direction: 'right' | 'left' | 'down') => `<svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(${direction === 'left' ? 180 : direction === 'down' ? 90 : 0}deg)"><path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
