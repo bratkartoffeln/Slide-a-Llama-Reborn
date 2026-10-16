@@ -1,4 +1,4 @@
-﻿# Regelgrundlage und Entscheidungen für 0.1.0
+﻿# Regelgrundlage und Entscheidungen für 0.1.1
 
 Umgesetzt ist der Früchte-/Slots-Modus mit eigener Darstellung. Recherche: 16.10.2026.
 

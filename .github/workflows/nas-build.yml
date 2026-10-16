@@ -4,7 +4,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: slide-a-lama-nas-${{ github.ref }}
+  group: slide-a-llama-nas-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   build:
@@ -21,24 +21,24 @@ jobs:
         run: node scripts/check-app-contract.mjs
       - name: Validate LAN Compose and build application
         run: |
-          docker compose -p slide-a-lama -f compose.yaml config --quiet
-          docker compose -p slide-a-lama -f compose.yaml build
+          docker compose -p slide-a-llama -f compose.yaml config --quiet
+          docker compose -p slide-a-llama -f compose.yaml build
       - name: Build DNS proxy and validate HTTPS configuration
         env:
-          SLIDE_DOMAIN: slide-a-lama.example.invalid
+          SLIDE_DOMAIN: slide-a-llama.example.invalid
         run: |
           mkdir -p secrets
           printf '%s\n' 'ci-dummy-not-a-real-token' > secrets/dynv6_api_token
-          docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml config --quiet
-          docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml build caddy
+          docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml config --quiet
+          docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml build caddy
           rm secrets/dynv6_api_token
       - name: Prepare tracked source package
         run: |
           mkdir -p release
-          git archive --format=tar.gz --output=release/slide-a-lama-${{ github.sha }}.tar.gz HEAD
+          git archive --format=tar.gz --output=release/slide-a-llama-${{ github.sha }}.tar.gz HEAD
           echo 'Build completed. Download the source package and follow QNAP-DEPLOYMENT.md. No NAS deployment was triggered.' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: slide-a-lama-nas-${{ github.sha }}
+          name: slide-a-llama-nas-${{ github.sha }}
           path: release/*.tar.gz
           retention-days: 14
