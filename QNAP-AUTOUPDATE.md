@@ -51,7 +51,19 @@ RPS-Pfade und RPS-Container sind keine Updateziele.
 
 Änderungen an Compose, Proxy, NAS-Konfiguration oder am Updater selbst werden
 deshalb bewusst über die separate Einrichtung vorgenommen; sie sind keine
-automatischen Spielupdates. Es gibt kein globales Docker-Prune.
+automatischen Spielupdates.
+
+Nach einem erfolgreich aktivierten, geprüften und gespeicherten Spielupdate führt
+`docker image prune --force` die Bereinigung unbenutzter, unbenannter Images
+(`<none>:<none>`) auf dem NAS aus. Die Bereinigung gilt für den gesamten Docker-
+Daemon und kann deshalb auch solche Images anderer Builds entfernen. Es wird
+kein `--all` und kein `docker system prune` verwendet: benannte Release- und
+Rollback-Images sowie Images, die noch von einem Container verwendet werden,
+bleiben erhalten. Container, Volumes und Netzwerke werden nicht aufgeräumt.
+Bei fehlgeschlagenen oder verschobenen Updates und bei einem Probelauf findet
+keine Bereinigung statt. Ein Bereinigungsfehler wird protokolliert und macht
+das erfolgreiche Update nicht rückgängig. Die Docker-Ausgabe mit dem freigegebenen
+Speicherplatz steht im Updater-Protokoll.
 Backups, Staging-Ordner und eigene Image-Tags werden erhalten und können Platz
 belegen; sie liegen vollständig im eigenen Updater-Bereich.
 
