@@ -33,6 +33,23 @@ async function pair(url: string) {
   const s = (await a.wait('snapshot', m => m.state.phase === 'playing')).state;
   return { a, b, welcome, s };
 }
+test('Timeout uses the latest valid slot of this turn and rejects stale, opposing and malformed selections', async t => {
+  const server = await startServer({ port: 0, animationMs: 0, turnMs: 300 }); t.after(() => server.close());
+  const { a, b } = await pair(server.url);
+  a.send({ type: 'aim', revision: 0, move: { side: 'left', lane: 1 } });
+  a.send({ type: 'aim', revision: 0, move: { side: 'right', lane: 3 } });
+  b.send({ type: 'aim', revision: 0, move: { side: 'top', lane: 2 } });
+  const first = (await a.wait('snapshot', m => m.state.game.revision === 1)).state;
+  assert.deepEqual(first.game.lastMove!.move, { side: 'right', lane: 3 }); assert.equal(first.game.lastMove!.automatic, true);
+  b.send({ type: 'aim', revision: 1, move: { side: 'left', lane: 2 } });
+  b.send({ type: 'aim', revision: 0, move: { side: 'right', lane: 0 } });
+  b.send({ type: 'aim', revision: 1, move: { side: 'top', lane: 99 } });
+  await b.wait('error');
+  const second = (await a.wait('snapshot', m => m.state.game.revision === 2)).state;
+  assert.deepEqual(second.game.lastMove!.move, { side: 'left', lane: 2 });
+  const third = (await a.wait('snapshot', m => m.state.game.revision === 3)).state;
+  assert.deepEqual(third.game.lastMove!.move, { side: 'top', lane: 0 });
+});
 test('Two real sockets share state, reject a third player and reject wrong/stale moves', async t => {
   const server = await startServer({ port: 0, animationMs: 0 }); t.after(() => server.close());
   const { a, b, welcome, s } = await pair(server.url);

@@ -4,7 +4,7 @@ import './feedback.css';
 import { fruit, llama, arrow } from './art';
 import { GameAudio, GameMusic } from './sound';
 import { FEEDBACK_TIMING } from './sound-events';
-import { crushesBottom } from '../shared/feedback';
+import { burstPlan, comboDelayMs, comboFactor, crushesBottom, frameFallMs, gravityPlan, initialGravityMs } from '../shared/feedback';
 import { BoardFeedback } from './board-feedback';
 import { HerdMotion } from './herd-motion';
 import { resultScene } from './result-scene';
@@ -65,7 +65,7 @@ app.innerHTML = `
 </main>
 <footer><span>Ein bisschen früher. Ein bisschen besser.</span><span>SLIDE-A-LLAMA REBORN <b>v${__APP_VERSION__}</b></span></footer>
 <div id="toast" class="toast" role="status" hidden></div>
-<dialog id="rules"><button class="dialog-close" id="rules-close" aria-label="Schließen">×</button><p class="eyebrow">KURZ ERKLÄRT</p><h2>Schieben. Kombinieren.<br/><em>Lamas gewinnen.</em></h2><p>Ihr spielt abwechselnd auf demselben 5×5-Feld. Setze den aktuellen Stein an einer Randposition von <b>oben, links oder rechts</b> ein. Nur Steine mit direktem Kontakt werden mitgeschoben. An der ersten Lücke endet die Schiebekette; Steine dahinter bleiben stehen. Ist der Streifen lückenlos voll, fällt der letzte Stein hinaus. Anschließend wirkt die Schwerkraft.</p><p>Mindestens drei gleiche Symbole in einer waagerechten oder senkrechten Reihe verschwinden. Vier zählen doppelt, fünf dreifach. Entsteht danach eine weitere Reihe, zählen ihre Punkte mit dem nächsten Kaskadenfaktor (×2, ×3, …). Leere Felder werden mit euren nächsten Zügen gefüllt.</p><p>Ihr startet mit je fünf Lamas. Je <b>60 Punkte Vorsprung</b> wechselt eines die Seite. Mit <b>300 Punkten Vorsprung</b> gewinnst du alle zehn und die Partie.</p><p>Nach Ablauf der Zugzeit wird dein Stein automatisch oben links eingesetzt. Bei Verbindungsabbruch pausiert die Partie für bis zu <b>120 Sekunden</b>. Danach gewinnt der verbliebene Spieler.</p><div class="keyboard-tip">Tastatur: <kbd>1</kbd>–<kbd>5</kbd> von oben · <kbd>Shift</kbd> + Zahl von links · <kbd>Alt</kbd> + Zahl von rechts</div><p class="small-note">Eigenständiger Früchte-Nachbau, inspiriert vom ICQ-Klassiker. Symbolhäufigkeiten und Punktewerte sind die Abstimmung dieser Version.</p><button class="button primary" id="rules-play">Alles klar, los geht’s</button></dialog>
+<dialog id="rules"><button class="dialog-close" id="rules-close" aria-label="Schließen">×</button><p class="eyebrow">KURZ ERKLÄRT</p><h2>Schieben. Kombinieren.<br/><em>Lamas gewinnen.</em></h2><p>Ihr spielt abwechselnd auf demselben 5×5-Feld. Setze den aktuellen Stein an einer Randposition von <b>oben, links oder rechts</b> ein. Nur Steine mit direktem Kontakt werden mitgeschoben. An der ersten Lücke endet die Schiebekette; Steine dahinter bleiben stehen. Ist der Streifen lückenlos voll, fällt der letzte Stein hinaus. Anschließend wirkt die Schwerkraft.</p><p>Mindestens drei gleiche Symbole in einer waagerechten oder senkrechten Reihe verschwinden. Vier zählen doppelt, fünf dreifach. Entsteht danach eine weitere Reihe, zählen ihre Punkte mit dem nächsten Kaskadenfaktor (×2, ×3, …). Leere Felder werden mit euren nächsten Zügen gefüllt.</p><p>Ihr startet mit je fünf Lamas. Je <b>60 Punkte Vorsprung</b> wechselt eines die Seite. Mit <b>300 Punkten Vorsprung</b> gewinnst du alle zehn und die Partie.</p><p>Nach Ablauf der Zugzeit wird dein Stein an der zuletzt erkannten Einschubposition eingesetzt (ohne Auswahl oben links). Bei Verbindungsabbruch pausiert die Partie für bis zu <b>120 Sekunden</b>. Danach gewinnt der verbliebene Spieler.</p><div class="keyboard-tip">Tastatur: <kbd>1</kbd>–<kbd>5</kbd> von oben · <kbd>Shift</kbd> + Zahl von links · <kbd>Alt</kbd> + Zahl von rechts</div><p class="small-note">Eigenständiger Früchte-Nachbau, inspiriert vom ICQ-Klassiker. Symbolhäufigkeiten und Punktewerte sind die Abstimmung dieser Version.</p><button class="button primary" id="rules-play">Alles klar, los geht’s</button></dialog>
 <dialog id="confirm"><h2 id="confirm-title">Partie verlassen?</h2><p id="confirm-copy"></p><div class="confirm-buttons"><button class="button secondary" id="confirm-no">Weiterspielen</button><button class="button primary" id="confirm-yes">Bestätigen</button></div></dialog>`;
 
 function notify(message: string) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 6500); }
@@ -206,16 +206,59 @@ function renderPlayers() {
   }
 }
 let activeInsertion: string | undefined;
+let aimTimer: ReturnType<typeof setTimeout> | undefined, lastAim = '', pendingAim = '';
+function rememberInsertion(move: string) {
+  if (!canMove() || !state) return;
+  const key = `${state.room}:${state.round}:${state.game.revision}:${move}`;
+  if (key === lastAim || key === pendingAim) return;
+  clearTimeout(aimTimer);
+  pendingAim = key;
+  const sendAim = () => {
+    pendingAim = '';
+    if (!canMove() || !state || key !== `${state.room}:${state.round}:${state.game.revision}:${move}`) return;
+    const [side, lane] = move.split(':');
+    if (connection.send({ type: 'aim', revision: state.game.revision, move: { side, lane: Number(lane) } })) lastAim = key;
+  };
+  if (state.deadline && state.deadline - Date.now() - clockOffset < 150) sendAim();
+  else aimTimer = setTimeout(sendAim, 80);
+}
+function layoutSlotButtons() {
+  const board = $('board-controls'), scene = board.parentElement!;
+  const temple = scene.querySelector<HTMLElement>('.retro-temple')!;
+  const bounds = scene.getBoundingClientRect(), image = retro ? temple.getBoundingClientRect() : bounds;
+  const tile = board.querySelector<HTMLElement>(':scope>.tile');
+  if (!tile) return;
+  const size = tile.getBoundingClientRect().width;
+  board.querySelectorAll<HTMLElement>('.move-button.left,.move-button.right').forEach(button => {
+    button.style.translate = 'none';
+    const rect = button.getBoundingClientRect();
+    const lane = Number(button.dataset.move!.split(':')[1]);
+    const inset = retro ? (4 - lane) * .015 : 0;
+    const centre = button.classList.contains('left') ? image.left + image.width * (.16 + inset) - size / 2 - 4 : image.left + image.width * (.84 - inset) + size / 2 + 4;
+    // Move the actual hit target, preview and animation origin together.
+    button.style.translate = `${centre - rect.left - rect.width / 2}px 0`;
+  });
+}
 function hideInsertionPreview() { activeInsertion = undefined; $('insertion-preview').hidden = true; }
+function insertionOrigin(button: HTMLElement, size: number) {
+  const rect = button.getBoundingClientRect();
+  let top = rect.top + rect.height / 2 - size / 2;
+  if (button.dataset.move!.startsWith('top:') && pointerSlots()) {
+    const firstRow = $('board-controls').querySelector<HTMLElement>('[data-row="0"][data-col="0"]')!.getBoundingClientRect();
+    top = Math.min(top - 22, firstRow.top - size - 16);
+  }
+  return { left: rect.left + rect.width / 2 - size / 2, top };
+}
 function updateInsertionPreview() {
   const preview = $('insertion-preview');
   const button = activeInsertion ? $('board-controls').querySelector<HTMLButtonElement>(`[data-move="${activeInsertion}"]`) : null;
   if (!button || button.disabled || !canMove() || matchMedia('(max-width:680px), (hover:none), (pointer:coarse)').matches) { preview.hidden = true; return; }
-  const bounds = preview.parentElement!.getBoundingClientRect(), target = button.getBoundingClientRect();
+  const bounds = preview.parentElement!.getBoundingClientRect();
   const cell = $('board-controls').querySelector<HTMLElement>(':scope>.tile')!.getBoundingClientRect();
   const size = cell.width;
   preview.dataset.side = activeInsertion!.split(':')[0];
-  Object.assign(preview.style, { left: target.left + target.width / 2 - bounds.left - size / 2 + 'px', top: target.top + target.height / 2 - bounds.top - size / 2 + 'px', width: size + 'px', height: size + 'px' });
+  const origin = insertionOrigin(button, size);
+  Object.assign(preview.style, { left: origin.left - bounds.left + 'px', top: origin.top - bounds.top + 'px', width: size + 'px', height: size + 'px' });
   const tile = state!.game.queue[0];
   if (preview.dataset.tile !== tile) { preview.dataset.tile = tile; preview.innerHTML = `<span class="tile stone-0">${fruit(tile)}</span>`; }
   preview.hidden = false;
@@ -223,6 +266,7 @@ function updateInsertionPreview() {
 const pointerSlots = () => matchMedia('(min-width:681px) and (hover:hover) and (pointer:fine)').matches;
 function selectInsertion(move?: string) {
   activeInsertion = move;
+  if (move) rememberInsertion(move);
   $('board-controls').querySelectorAll<HTMLElement>('[data-move]').forEach(button => button.classList.toggle('active-arrow', button.dataset.move === move));
   // The swinging stone is the visual indicator; keep the board itself quiet.
   $('board-controls').querySelectorAll('.preview').forEach(cell => cell.classList.remove('preview'));
@@ -232,7 +276,7 @@ function insertionAt(x: number, y: number): string | undefined {
   const tiles = [...$('board-controls').querySelectorAll<HTMLElement>(':scope>.tile')];
   if (!tiles.length) return;
   const first = tiles[0].getBoundingClientRect(), last = tiles.at(-1)!.getBoundingClientRect();
-  const bounds = $('board-controls').getBoundingClientRect();
+  const bounds = $('board-controls').parentElement!.getBoundingClientRect();
   if (x < bounds.left || x > bounds.right || y < bounds.top || y > last.bottom) return;
   const width = last.right - first.left, height = last.bottom - first.top;
   const distances = [Math.abs(x - first.left), Math.abs(x - last.right), Math.abs(y - first.top)];
@@ -243,18 +287,18 @@ function insertionAt(x: number, y: number): string | undefined {
   const lane = (position: number, start: number, extent: number) => Math.max(0, Math.min(4, Math.floor((position - start) / extent * 5)));
   return distances[2] === nearest ? `top:${lane(x, first.left, width)}` : `${distances[0] === nearest ? 'left' : 'right'}:${lane(y, first.top, height)}`;
 }
-$('board-controls').addEventListener('pointermove', event => {
+$('board-controls').parentElement!.addEventListener('pointermove', event => {
   if (!pointerSlots() || event.pointerType === 'touch') return;
   const target = (event.target as Element).closest<HTMLButtonElement>('[data-move]');
   selectInsertion(target?.dataset.move ?? insertionAt(event.clientX, event.clientY));
 });
-$('board-controls').addEventListener('pointerleave', () => { if (pointerSlots()) selectInsertion(); });
-$('board-controls').addEventListener('click', event => {
+$('board-controls').parentElement!.addEventListener('pointerleave', () => { if (pointerSlots()) selectInsertion(); });
+$('board-controls').parentElement!.addEventListener('click', event => {
   if (!pointerSlots() || (event.target as Element).closest('button')) return;
   const move = insertionAt(event.clientX, event.clientY);
   if (move) { const [side, lane] = move.split(':'); makeMove({ side: side as Move['side'], lane: Number(lane) }); }
 });
-window.addEventListener('resize', () => updateInsertionPreview());
+window.addEventListener('resize', () => { layoutSlotButtons(); updateInsertionPreview(); });
 function scheduleLamaIdle() {
   setTimeout(() => {
     if (state?.phase === 'playing' && status === 'connected' && !animating && !movePending && audio.playIdleLama()) herdMotion.react();
@@ -275,6 +319,7 @@ function renderBoard(board: Board, matches: [number, number][] = []) {
     html += moveButton('right', r, r + 2, 7);
   }
   $('board-controls').innerHTML = html;
+  layoutSlotButtons();
   $('board-controls').querySelectorAll<HTMLButtonElement>('button').forEach(b => {
     b.onclick = () => { const [side, lane] = b.dataset.move!.split(':'); makeMove({ side: side as Move['side'], lane: +lane }); };
     const highlight = (on: boolean) => {
@@ -294,14 +339,20 @@ function animateElement(element: Element, frames: Keyframe[], duration: number, 
   activeAnimations.add(animation);
   void animation.finished.catch(() => {}).finally(() => activeAnimations.delete(animation));
 }
-function fallingPieces(board: Board, duration: number) {
-  const height = $('board-controls').querySelector('.tile')!.getBoundingClientRect().height + (retro ? 2 : 5);
-  for (let c = 0; c < 5; c++) {
-    let target = 4;
-    for (let r = 4; r >= 0; r--) if (board[r][c]) {
-      if (target !== r) animateElement($('board-controls').querySelector(`[data-row="${target}"][data-col="${c}"]`)!, [{ transform: `translateY(${(r - target) * height}px)` }, { transform: 'translateY(2px) scale(1.025,.96)', offset: .85 }, { transform: 'none' }], duration);
-      target--;
-    }
+function fallingPieces(board: Board) {
+  const height = $('board-controls').querySelector('.tile')!.getBoundingClientRect().height + parseFloat(getComputedStyle($('board-controls')).rowGap);
+  for (const fall of gravityPlan(board)) {
+    const contact = fall.flight / fall.duration;
+    const frames: Keyframe[] = Array.from({ length: 13 }, (_, index) => {
+      const t = index / 12;
+      return { transform: `translateY(${-fall.cells * height * (1 - t * t)}px)`, offset: contact * t };
+    });
+    frames.push(
+      { transform: 'translateY(2px) scale(1.025,.965)', offset: (fall.flight + 35) / fall.duration },
+      { transform: 'translateY(-1px) scale(.995,1.01)', offset: (fall.flight + 75) / fall.duration },
+      { transform: 'translateY(0) scale(1)', offset: 1 }
+    );
+    animateElement($('board-controls').querySelector(`[data-row="${fall.target}"][data-col="${fall.col}"]`)!, frames, fall.duration, 'linear');
   }
 }
 async function animateMove(snapshot: Snapshot, previous: Board) {
@@ -309,11 +360,25 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
   const last = snapshot.game.lastMove!;
   const pushed = push(previous, last.tile, last.move);
   const scene = $('board-controls').parentElement!;
+  const slot = $('board-controls').querySelector<HTMLElement>(`[data-move="${last.move.side}:${last.move.lane}"]`)!;
+  const entrySize = $('board-controls').querySelector('.tile')!.getBoundingClientRect().width;
+  const previewStone = !$('insertion-preview').hidden && activeInsertion === `${last.move.side}:${last.move.lane}` ? $('insertion-preview').firstElementChild?.getBoundingClientRect() : undefined;
+  let entry = previewStone ?? insertionOrigin(slot, entrySize);
+  const incomingFrames = (element: Element, vertical = false): Keyframe[] => {
+    const rect = element.getBoundingClientRect();
+    return [
+      { transform: `translate(${entry.left - rect.left}px,${entry.top - rect.top}px)`, offset: 0, easing: vertical ? 'cubic-bezier(.55,0,1,.65)' : 'linear' },
+      { transform: vertical ? 'translateY(2px) scale(1.025,.96)' : 'scaleX(.98)', offset: .96 }, { transform: 'none' }
+    ];
+  };
   const crush = crushesBottom(previous, last.move);
   let ejection: Promise<void> | undefined;
   if (crush) {
     renderBoard(previous); scene.dataset.motionPhase = 'cracking';
-    boardFeedback.crackBottom(previous, last.move.lane, last.tile);
+    boardFeedback.crackBottom(previous, last.move.lane, last.tile, entry);
+    const topCell = $('board-controls').querySelector(`[data-row="0"][data-col="${last.move.lane}"]`)!.getBoundingClientRect();
+    // Once placed, the stone rests against the column rather than at its hovering preview height.
+    entry = { left: topCell.left, top: topCell.top - topCell.height };
     await new Promise(r => setTimeout(r, FEEDBACK_TIMING.crack));
     if (generation !== animationGeneration) return;
     scene.dataset.motionPhase = 'bursting';
@@ -330,20 +395,20 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
   const { side, lane } = last.move;
   if (directFall) {
     const destination = 4 - previous.filter(row => row[lane] !== null).length;
-    animateElement($('board-controls').querySelector(`[data-row="${destination}"][data-col="${lane}"]`)!, [
-      { transform: `translateY(-${(destination + 1) * size}px)`, offset: 0, easing: 'cubic-bezier(.55,0,1,.65)' },
-      { transform: 'translateY(2px) scale(1.025,.96)', offset: .96 }, { transform: 'none' }
-    ], FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity, 'linear');
+    const cell = $('board-controls').querySelector(`[data-row="${destination}"][data-col="${lane}"]`)!;
+    animateElement(cell, incomingFrames(cell, true), FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity, 'linear');
   } else if (side === 'top') {
     for (let r = 0; r < 5; r++) {
       const cell = $('board-controls').querySelector(`[data-row="${r}"][data-col="${lane}"]`)!;
-      animateElement(cell, [{ transform: `translateY(-${size}px)` }, { transform: 'translateY(2px) scaleY(.98)', offset: .88 }, { transform: 'none' }], 320);
+      animateElement(cell, r === 0 ? incomingFrames(cell, true) : [{ transform: `translateY(-${size}px)` }, { transform: 'translateY(2px) scaleY(.98)', offset: .88 }, { transform: 'none' }], 320);
       if (previous[r][lane] === null) break;
     }
   } else {
     const from = side === 'left' ? 0 : 4, step = side === 'left' ? 1 : -1;
     for (let c = from; c >= 0 && c < 5; c += step) {
-      animateElement($('board-controls').querySelector(`[data-row="${lane}"][data-col="${c}"]`)!, [{ transform: `translateX(${-step * size}px)` }, { transform: `translateX(${step * 2}px) scaleX(.98)`, offset: .88 }, { transform: 'none' }], 320);
+      const cell = $('board-controls').querySelector(`[data-row="${lane}"][data-col="${c}"]`)!;
+      // The incoming side stone passes behind the pillars; settled board stones stay in front.
+      animateElement(cell, c === from ? incomingFrames(cell).map(frame => ({ ...frame, zIndex: 6 })) : [{ transform: `translateX(${-step * size}px)` }, { transform: `translateX(${step * 2}px) scaleX(.98)`, offset: .88 }, { transform: 'none' }], 320);
       if (previous[lane][c] === null) break;
     }
   }
@@ -351,8 +416,8 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
   else {
     await new Promise(r => setTimeout(r, FEEDBACK_TIMING.insert));
     if (generation !== animationGeneration) return;
-    renderBoard(insert(previous, last.tile, last.move)); fallingPieces(pushed, 200);
-    await new Promise(r => setTimeout(r, FEEDBACK_TIMING.gravity));
+    renderBoard(insert(previous, last.tile, last.move)); fallingPieces(pushed);
+    await new Promise(r => setTimeout(r, initialGravityMs(last, previous)));
   }
   for (const frame of snapshot.game.lastMove!.frames) {
     if (generation !== animationGeneration) return;
@@ -363,17 +428,17 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
     await new Promise(r => setTimeout(r, FEEDBACK_TIMING.matchTitle));
     if (generation !== animationGeneration) return;
     scene.dataset.motionPhase = 'bursting';
-    renderBoard(frame.board, frame.matches);
+    renderBoard(frame.board);
     boardFeedback.burst(frame, snapshot.game.lastMove!.seat === snapshot.you);
     $('move-feedback').textContent = `+${frame.points} Punkte${frame.multiplier > 1 ? '' : ' · Gute Kombination!'}`;
-    await new Promise(r => setTimeout(r, FEEDBACK_TIMING.burst));
+    await new Promise(r => setTimeout(r, burstPlan(frame).duration));
     if (generation !== animationGeneration) return;
     const cleared = cloneBoard(frame.board);
     for (const [r, c] of frame.matches) cleared[r][c] = null;
-    const settled = cloneBoard(cleared); gravity(settled); renderBoard(settled); fallingPieces(cleared, 200);
-    await new Promise(r => setTimeout(r, FEEDBACK_TIMING.fall));
-    if (frame.multiplier > 1) {
-      const remainingDelay = FEEDBACK_TIMING.comboDelay - FEEDBACK_TIMING.burst - FEEDBACK_TIMING.fall;
+    const settled = cloneBoard(cleared); gravity(settled); renderBoard(settled); fallingPieces(cleared);
+    await new Promise(r => setTimeout(r, frameFallMs(frame)));
+    if (comboFactor(frame) > 1) {
+      const remainingDelay = comboDelayMs(frame) - burstPlan(frame).duration - frameFallMs(frame);
       await new Promise(r => setTimeout(r, remainingDelay));
       if (generation !== animationGeneration) return;
       $('move-feedback').textContent = `+${frame.points} Punkte · Kaskade ×${frame.multiplier}!`;
@@ -428,7 +493,7 @@ function renderQueue(advance = false, previousBoard?: Board) {
     plate.style.rotate = queueWheelAngle + 'deg';
     if (!motionEnabled()) return;
     const last = state!.game.lastMove!;
-    const delay = FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity +
+    const delay = FEEDBACK_TIMING.insert + initialGravityMs(last, previousBoard) +
       (crushesBottom(previousBoard, last.move) ? FEEDBACK_TIMING.crack + FEEDBACK_TIMING.crush : 0);
     const animate = (element: HTMLElement, frames: Keyframe[]) => {
       const animation = element.animate(frames, { duration: 660, delay, fill: 'backwards', easing: 'cubic-bezier(.45,0,.3,1)' });

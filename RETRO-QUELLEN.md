@@ -96,6 +96,18 @@ Zahlenfelder in den oberen Ecken. Die Tempelgrafik und ihre vorderen Säulen
 werden horizontal verbreitert, damit die Spielfeldsteine frei bleiben, während
 die Einschubvorschau hinter den Säulen liegt.
 
+### Einzelne Buchstaben und Trefferumrandungen für 0.1.12
+
+Die Frames 4, 9 und 12 von Sprite 1160 wurden zusätzlich als SVG exportiert.
+`three-of-a-kind.svg`, `four-of-a-kind.svg` und `five-of-a-kind.svg` erhalten nur
+eine passende `viewBox`; die Originalpfade und Buchstabenpositionen bleiben
+erhalten. Die benannten `a1`–`a12`-Instanzen fallen zeitversetzt mit leichter
+Drehung herein und federn einzeln ein. Die bisherigen PNGs bleiben als Referenz.
+Die Trefferhervorhebung verwendet nun drei blinkende helle Umrandungen statt
+eines Ausblendens der vollständigen Steine. Gleichzeitig erkannte Reihen und
+Folgekaskaden lösen beide den vorhandenen Original-Combo-Effekt aus.
+Zusätzliche „of a Kind“-Ansagen werden auf Nutzerwunsch nicht eingebunden.
+
 ## Originaleffekte und Extraktion
 
 Quelle: die auf der Spielseite verlinkte

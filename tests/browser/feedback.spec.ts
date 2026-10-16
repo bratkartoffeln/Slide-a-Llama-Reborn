@@ -157,6 +157,11 @@ test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone
   await target.click();
   await expect(page.locator('.board-scene')).toHaveAttribute('data-motion-phase', 'cracking');
   await expect(page.locator('.stone-cracks')).toHaveCount(1);
+  await expect.poll(() => page.locator('.waiting-stone').evaluate(stone => {
+    const placed = stone.getBoundingClientRect();
+    const top = document.querySelector('#board-controls [data-row="0"][data-col="0"]')!.getBoundingClientRect();
+    return Math.abs(placed.bottom - top.top);
+  })).toBeLessThan(1);
   await expect(page.locator('#board-controls [data-row="1"][data-col="0"] img')).toHaveAttribute('src', rowBefore!);
   const plate = page.locator('#queue-wheel .wheel-plate');
   await expect.poll(() => plate.evaluate(el => el.getAnimations().some(animation => animation.playState === 'running'))).toBe(true);

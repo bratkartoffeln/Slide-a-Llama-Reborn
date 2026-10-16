@@ -72,6 +72,11 @@ test('Mobile lobby, rules, training and touch targets fit without horizontal scr
   expect(errors).toEqual([]); await context.close();
 });
 test('Theme and motion preferences persist, and disabling animations settles an active move', async ({ page }) => {
+  let availableAt = 0;
+  page.on('websocket', socket => socket.on('framereceived', event => {
+    const message = JSON.parse(String(event.payload));
+    if (message.type === 'snapshot') availableAt = Date.now() + Math.max(0, message.state.availableAt - message.state.serverTime);
+  }));
   await page.goto('/');
   await page.locator('#sfx-toggle').click();
   await page.locator('#name').fill('Retro'); await page.locator('#practice').click();
@@ -81,7 +86,7 @@ test('Theme and motion preferences persist, and disabling animations settles an 
   await expect(page.locator('body')).toHaveClass(/motion-off/);
   await expect(page.locator('#motion-toggle')).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('#turn-label')).toContainText('Du bist dran', { timeout: 8000 });
-  await expect(page.locator('.move-button:enabled')).toHaveCount(15);
+  await expect(page.locator('.move-button:enabled')).toHaveCount(15, { timeout: Math.max(5000, availableAt - Date.now() + 1500) });
   expect(await page.locator('#board-controls').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length)).toBe(0);
   const code = await page.locator('#room-code').textContent();
   await page.reload();

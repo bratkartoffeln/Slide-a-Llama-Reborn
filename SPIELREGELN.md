@@ -41,8 +41,9 @@ Nach dem Entfernen fallen Steine, ohne zufällige Auffüllung. Der Start enthäl
 25 Steine und keine fertigen Linien. Lamas folgen der aktuellen Punktedifferenz;
 ein geschrumpfter Vorsprung kann sie wieder zurückbringen.
 
-Ergänzungen: Zugzeit 15/30/60 Sekunden (Standard 30), automatische Einsetzung oben
-links bei Zeitablauf, Revanche mit wechselndem Startspieler, 120 Sekunden
+Ergänzungen: Zugzeit 15/30/60 Sekunden (Standard 30), automatische Einsetzung an
+der zuletzt erkannten Position dieses Zugs bei Zeitablauf (ohne Auswahl oben links),
+Revanche mit wechselndem Startspieler, 120 Sekunden
 Wiederverbindungszeit und ein Trainingsgegner. Dies sind Entscheidungen der
 Neuauflage, keine Behauptung vollständiger Originaltreue. Poker ist nicht enthalten.
 
