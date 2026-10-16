@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ORIGINAL_SOUND_FILES } from '../../client/audio-catalog';
 test('Two browsers play, exchange safe chat, reconnect after reload, and agree on a rematch', async ({ browser }) => {
   const hostContext = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
   const guestContext = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
@@ -56,6 +57,7 @@ test('Mobile lobby, rules, training and touch targets fit without horizontal scr
 });
 test('Theme and motion preferences persist, and disabling animations settles an active move', async ({ page }) => {
   await page.goto('/');
+  await page.locator('#voices-toggle').click();
   await page.locator('#theme-toggle').click();
   await page.locator('#name').fill('Retro'); await page.locator('#practice').click();
   await expect(page.locator('#turn-label')).toContainText('Du bist dran');
@@ -71,18 +73,19 @@ test('Theme and motion preferences persist, and disabling animations settles an 
   await expect(page.locator('body')).toHaveAttribute('data-theme', 'retro');
   await expect(page.locator('body')).toHaveClass(/motion-off/);
   await expect(page.locator('#room-code')).toHaveText(code!);
+  await expect(page.locator('#voices-toggle')).toHaveAttribute('aria-pressed', 'false');
   expect(await page.locator('.retro-art').evaluateAll((images: HTMLImageElement[]) => images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
-  const audio = await page.evaluate(async () => {
+  const audio = await page.evaluate(async files => {
     const context = new AudioContext();
     try {
-      return await Promise.all(['match', 'combo', 'transfer'].map(async cue => {
-        const response = await fetch(`/audio/retro-${cue}.mp3`);
+      return await Promise.all(files.map(async file => {
+        const response = await fetch(file);
         const buffer = await context.decodeAudioData(await response.arrayBuffer());
         return response.headers.get('content-type') === 'audio/mpeg' && buffer.duration > 0;
       }));
     } finally { await context.close(); }
-  });
-  expect(audio).toEqual([true, true, true]);
+  }, ORIGINAL_SOUND_FILES);
+  expect(audio).toHaveLength(56); expect(audio.every(Boolean)).toBe(true);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('#motion-toggle')).toBeDisabled();
   await page.emulateMedia({ reducedMotion: 'no-preference' });

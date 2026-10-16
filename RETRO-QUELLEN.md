@@ -1,4 +1,4 @@
-# Retro-Recherche und Medien für 0.1.2
+# Retro-Recherche und Medien für 0.1.3
 
 Recherche und Abruf: 16.10.2026. Der Retro-Modus ist eine alternative Darstellung
 derselben Online-Partie. Das moderne Layout bleibt auswählbar.
@@ -50,11 +50,55 @@ Die Soundnamen wurden anhand der exportierten Symboltabelle und der Soundaufrufe
 zugeordnet. Die eingebundenen MP3s stammen direkt aus diesem Export, nicht aus
 der gemischten Tonspur des Walkthroughs.
 
-| Lokale Datei unter `public/audio/` | Originalsymbol | Ereignis |
+Die frühere pauschale Trefferdatei war tatsächlich `fruit2-0`, also eine Variante
+der Bananengruppe. Seit 0.1.3 wird das aufgelöste Symbol je Kaskade ausgewertet;
+der eingeschobene Stein ist dafür nicht maßgeblich. Beide Layouts verwenden
+dieselben Originalgruppen. Drei, vier und fünf gleiche Symbole wählen im
+Original dieselbe Symbolgruppe; eine zusätzliche Kaskade erhält den Ketteneffekt.
+
+| Dateien unter `public/audio/` | Originalsymbol(e) | Zuordnung |
 | --- | --- | --- |
-| `retro-match.mp3` | 6 / `fruit2-0` | Treffer |
-| `retro-combo.mp3` | 837 / `combo` | Mehrstufige Kette |
-| `retro-transfer.mp3` | 839 / `transhappy1` | Lamawechsel |
+| `original/fruit1-0` bis `fruit1-4.mp3` | Tags 1–5 | Glocke, 5 Varianten |
+| `original/fruit2-0` bis `fruit2-14.mp3` | Tags 6–20 | Banane / moderne Zitrone, 15 Varianten |
+| `original/fruit3-0` bis `fruit3-5.mp3` | Tags 21–26 | Pflaume / moderne Traube, 6 Varianten |
+| `original/fruit4-0` bis `fruit4-8.mp3` | Tags 27–35 | Birne / moderne Melone, 9 Varianten |
+| `original/fruit5-0` bis `fruit5-6.mp3` | Tags 36–42 | Kirsche, 7 Varianten |
+| `original/fruit7-0` bis `fruit7-2.mp3` | Tags 47–49 | Sieben, 3 Varianten |
+| `retro-combo.mp3` | 837 / `combo` | Ab der zweiten Kaskade |
+| `original/transhappy1.mp3` bis `transhappy7.mp3` | 839–844 und 53 | Freude über hinzugewonnene Lamas |
+| `original/transpissed1.mp3` bis `transpissed3.mp3` | 52, 51, 50 | Verärgerung über verlorene Lamas |
+
+45 Treffer-Varianten, zehn Stimmen und ein Ketteneffekt: insgesamt 56 Dateien.
+Alle MP3s wurden unverändert aus den Sound-Tags exportiert. Die unbenutzte
+BAR-Gruppe `fruit6` wird nicht ausgeliefert. Eine gemischte Auswahl verwendet
+alle Varianten einmal, bevor sie erneut gemischt wird, ohne direkte Wiederholung.
+
+Die konkrete Zuordnung ist im exportierten Originalcode belegt:
+`DefineSprite_1174/frame_2` setzt `sn = winningHand.used[0].num - 1` und spielt
+`fruit{sn}-{Variante}`. `frame_9` definiert die sieben Gruppen und deren Größen.
+`worshiper.prototype.ef` spielt bei Ankunft `transHappy1`–`7`;
+`DefineSprite_690/frame_1132` spielt `transPissed1`–`3`.
+
+### Erneuter Videoabgleich für 0.1.3
+
+Der Original-Walkthrough wurde erneut mit Bild und Ton heruntergeladen. Der
+Abschnitt 01:05–01:25 wurde als Bildfolge und separate Tonspur extrahiert.
+Zusätzlich wurden die Originalsamples mit der Videotonspur technisch verglichen:
+Mono-PCM mit 2 kHz, Bandpass 120–900 Hz, normierte Kreuzkorrelation.
+Dieser Abgleich unterstützt die Zuordnung trotz der gemischten Videotonspur:
+
+| Videoposition | Bester zugehöriger Sampletreffer | Korrelationswert |
+| --- | --- | --- |
+| 01:07,968 | `transPissed2` | 0,356 |
+| 01:12,100 | `fruit3-3` (Pflaumen-Kombination) | 0,394 |
+| 01:18,674 | `transhappy5` | 0,517 |
+
+Die Einzelsamples aus der SWF vermeiden die überlagerten Musik-/Spielsounds
+des Videos. Der Browser prüft das erfolgreiche Decodieren aller 56 Dateien.
+Die Wiedergabe startet pro tatsächlichem Zug, nicht beim Laden oder Reconnect.
+Neue Züge, Stummschalten und Raumwechsel verwerfen veraltete Audioereignisse.
+Die positiven/verärgerten Stimmen orientieren sich an der Perspektive des
+jeweiligen Spielers. Die Zahl offener Audiokanäle ist begrenzt.
 
 Reproduzierbare Befehle, Pfade an die lokale Werkzeugablage anpassen:
 
@@ -77,9 +121,14 @@ Originalmedien werden nicht als eigene oder frei lizenzierte Werke ausgegeben.
 ## Umsetzung und Abweichungen
 
 Aus den Referenzen übernommen: ICQ-artiger Fensterrahmen, Tempelbühne,
-Fruchtsymbole, Teamfarben, Trefferblasen und Geräuschcharakter. Einschübe,
-Schwerkraft, Trefferketten, Teamwechsel und Sieganzeige sind neu im Browser
-animiert. Abschalten bricht laufende Animationen ab; `prefers-reduced-motion`
+Fruchtsymbole, Teamfarben und Geräuschcharakter. Die neuen Steinprofile,
+Sandsteinstruktur, Bruchstücke und aufsteigenden Punkte sind eigene CSS-/SVG-
+Gestaltungen. Pro Kaskade wird die tatsächlich gutgeschriebene Punktzahl gezeigt.
+Die Herde verwendet stabile Figurenkennungen für sichtbare Wege zwischen
+den Seiten. Blinzeln und kleine Deformationen folgen dem Prinzip der RPS-
+Ruhebewegungen: voneinander unabhängige Zeitgeber statt synchroner Bewegung,
+160-ms-Blinzeln und zurückhaltende Skalierungen/Drehungen.
+Abschalten bricht laufende Animationen ab; `prefers-reduced-motion`
 deaktiviert Bewegung unabhängig vom gespeicherten Schalter.
 
 Die existierenden sechs Steintypen, Punkte, Vorschau und Zeitwahl bleiben die

@@ -1,0 +1,42 @@
+/* Carved, chipped profiles and a separate lower edge replace rectangular tiles. */
+.tile,body[data-theme=retro] .tile{
+ --stone-profile:polygon(5% 3%,34% 0,64% 3%,94% 1%,100% 15%,97% 48%,100% 87%,89% 97%,57% 100%,28% 97%,3% 100%,0 77%,2% 40%,0 12%);
+ --stone-light:#fff4d6;--stone-mid:#e7d3a3;--stone-edge:#ad8952;
+ position:relative;background:none;border:0;border-radius:0;box-shadow:none;overflow:visible;
+ filter:drop-shadow(0 2px 1px #382c2424);isolation:isolate;
+}
+.stone-1{--stone-profile:polygon(2% 10%,14% 2%,44% 0,77% 3%,95% 0,100% 13%,97% 54%,100% 90%,90% 100%,62% 97%,25% 100%,0 91%,3% 61%,0 30%)!important}
+.stone-2{--stone-profile:polygon(0 7%,10% 0,40% 4%,70% 1%,97% 6%,100% 29%,97% 70%,100% 92%,81% 99%,52% 97%,18% 100%,2% 90%,0 58%,3% 26%)!important}
+.stone-3{--stone-profile:polygon(6% 0,37% 3%,67% 0,91% 3%,100% 17%,97% 47%,100% 76%,96% 98%,66% 100%,33% 97%,5% 100%,0 83%,3% 48%,0 17%)!important}
+.stone-4{--stone-profile:polygon(3% 5%,26% 0,53% 3%,84% 0,98% 7%,100% 44%,97% 72%,100% 92%,92% 100%,62% 98%,33% 100%,6% 96%,0 86%,3% 56%,0 27%)!important}
+.tile:before,.tile:after{content:'';position:absolute;inset:0;clip-path:var(--stone-profile);pointer-events:none;z-index:-1;border-radius:0}
+.tile:before{background:linear-gradient(110deg,#c09c62,var(--stone-edge) 60%,#86613d);transform:translateY(5px)}
+.tile:after{background:url('/stone-grain.svg') center/100% 100%,linear-gradient(155deg,var(--stone-light) 12%,var(--stone-mid));box-shadow:inset 3px 4px 0 #fff9e6b0,inset -3px -4px 0 #c1a26b88}
+.tile .tile-art,body[data-theme=retro] .tile .tile-art{position:relative;width:82%;height:82%;z-index:1;clip-path:var(--stone-profile)}
+body[data-theme=retro] .tile{--stone-light:#fff8d4;--stone-mid:#efd78f;--stone-edge:#a18139}
+body[data-theme=retro] .tile .retro-art{mix-blend-mode:multiply;object-fit:contain}
+.tile.preview,body[data-theme=retro] .tile.preview{background:none;box-shadow:none;filter:drop-shadow(0 0 3px #ffe19a)}
+.tile.empty,body[data-theme=retro] .tile.empty{background:none;border:0;box-shadow:none;filter:none;opacity:.34}
+.tile.empty:before{display:none}.tile.empty:after{background:#af9a6b35;box-shadow:inset 1px 2px 5px #65522c55}
+.tile.matched,body[data-theme=retro] .tile.matched{background:none;animation:stone-vanish .18s ease-in both}
+.tile.matched:after{inset:0;border:0;border-radius:0;animation:none}
+@keyframes stone-vanish{0%{opacity:1;transform:scale(1)}30%{opacity:1;transform:scale(1.04)}100%{opacity:0;transform:scale(.88)}}
+.board-effects{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:clip}
+.stone-fragment{position:absolute;display:block;pointer-events:none;will-change:transform,opacity}
+.stone-fragment>.tile-piece{display:flex;width:100%;height:100%;align-items:center;justify-content:center;aspect-ratio:auto;animation:none}
+.score-popup{position:absolute;display:flex;flex-direction:column;align-items:center;white-space:nowrap;color:#c35d32;line-height:1;font-family:'Arial Black','Segoe UI',sans-serif;text-align:center;will-change:transform,opacity;z-index:6;text-shadow:0 2px #fff8dc,2px 0 #fff8dc,-2px 0 #fff8dc,0 -2px #fff8dc,0 4px 4px #30241466}
+.score-popup strong{font-size:clamp(25px,4vw,42px);letter-spacing:-1.5px}.score-popup small{margin-top:6px;font-size:10px;letter-spacing:1px;color:#6c4822}
+.score-popup.opponent-points{color:#486c9e}
+body[data-theme=retro] .score-popup{color:#c91cbd;text-shadow:0 2px #fff5cf,2px 0 #fff5cf,-2px 0 #fff5cf,0 -2px #fff5cf,2px 4px #5e276d88}
+body[data-theme=retro] .score-popup.opponent-points{color:#6158dd}
+.llama-life{display:block;width:100%;transform-origin:center bottom}
+.llama-eyes{transform-box:fill-box;transform-origin:center}
+.mini-llama{position:relative;transform-origin:center bottom}
+.mini-llama.is-crossing{z-index:3}
+.mini-llama.is-crossing .llama-life{transform:scaleX(-1);animation:llama-stride .16s ease-in-out infinite alternate}
+@keyframes llama-stride{from{scale:1.035 .96;rotate:-2deg}to{scale:.975 1.025;rotate:2deg}}
+.voices-toggle[aria-pressed=false]{opacity:.55;text-decoration:line-through}
+body[data-theme=retro] .voices-toggle{font-size:10px;padding:7px}
+@media(max-width:680px){.site-header nav{gap:7px}.site-header .voices-toggle{font-size:10px;padding:7px}.score-popup strong{font-size:29px}.score-popup small{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.board-effects{display:none}}
+body.motion-off .board-effects{display:none}
