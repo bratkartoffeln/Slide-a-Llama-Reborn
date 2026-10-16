@@ -12,4 +12,11 @@ export const LAMA_SOUNDS = {
   angry: Array.from({ length: 3 }, (_, i) => `/audio/original/transpissed${i + 1}.mp3`)
 } as const;
 export const COMBO_SOUND = '/audio/retro-combo.mp3';
-export const ORIGINAL_SOUND_FILES = [...Object.values(MATCH_SOUNDS).flat(), ...LAMA_SOUNDS.happy, ...LAMA_SOUNDS.angry, COMBO_SOUND];
+export const STONE_SOUNDS = {
+  slide: '/audio/original/stone-slide.mp3', drop: '/audio/reference/stone-drop-original.mp3',
+  squeeze: '/audio/original/stone-squeeze.mp3', burst: '/audio/original/stone-burst.mp3',
+  shatter: '/audio/original/stone-shatter.mp3'
+} as const;
+export const ORIGINAL_SOUND_FILES = [...Object.values(MATCH_SOUNDS).flat(), ...LAMA_SOUNDS.happy, ...LAMA_SOUNDS.angry, COMBO_SOUND, ...Object.values(STONE_SOUNDS)];
+export const CHAT_SOUND = '/audio/icq-uh-oh.mp3';
+export const SOUND_FILES = [...ORIGINAL_SOUND_FILES, CHAT_SOUND];

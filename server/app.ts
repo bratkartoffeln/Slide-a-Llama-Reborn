@@ -8,6 +8,7 @@ import { newGame, play, botMove, validMove, type Game, type Seat, type Move } fr
 import { normalizeText, requestId, type Phase, type ServerMessage, type Snapshot } from '../shared/protocol.js';
 import { RoomChat } from './chat.js';
 import { DeploymentGuard } from './deploy-guard.js';
+import { turnMotionMs } from '../shared/feedback.js';
 
 const random = () => randomInt(0, 0x100000000) / 0x100000000;
 interface Player { name: string; token: string; socket: WebSocket | null; bot: boolean; rematch: boolean; reconnectUntil: number | null }
@@ -23,7 +24,6 @@ export async function startServer(options: ServerOptions = {}) {
   const ipRates = new Map<string, { count: number; since: number }>();
   const reconnectMs = options.reconnectMs ?? 120_000;
   const gameRandom = options.random ?? random;
-  const animationMs = options.animationMs ?? 500;
   const root = resolve(options.staticDir ?? 'dist/client');
   const version = (JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { version: string }).version;
   let ready = true;
@@ -79,9 +79,10 @@ export async function startServer(options: ServerOptions = {}) {
   function move(room: Room, seat: Seat, input: Move, automatic = false) {
     if (room.phase !== 'playing' || !connected(room)) throw new Error('Warte, bis beide Spieler verbunden sind.');
     if (Date.now() < room.availableAt) throw new Error('Die Steine bewegen sich noch.');
+    const beforeScores = room.game.scores;
     room.game = play(room.game, seat, input, gameRandom, automatic);
     room.touched = Date.now();
-    room.availableAt = Date.now() + Math.max(1, room.game.lastMove!.frames.length) * animationMs;
+    room.availableAt = Date.now() + (options.animationMs !== undefined ? Math.max(1, room.game.lastMove!.frames.length) * options.animationMs : turnMotionMs(room.game.lastMove!, beforeScores, room.game.scores));
     if (room.game.winner !== null) { finish(room, room.game.winner, 'Alle zehn Lamas sind überzeugt!'); return; }
     room.deadline = room.availableAt + duration(room);
     room.botAt = room.availableAt + (options.botDelayMs ?? 1100); broadcast(room);

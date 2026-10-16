@@ -1,4 +1,4 @@
-# Retro-Recherche und Medien für 0.1.3
+# Retro-Recherche und Medien für 0.1.4
 
 Recherche und Abruf: 16.10.2026. Der Retro-Modus ist eine alternative Darstellung
 derselben Online-Partie. Das moderne Layout bleibt auswählbar.
@@ -68,8 +68,10 @@ Original dieselbe Symbolgruppe; eine zusätzliche Kaskade erhält den Ketteneffe
 | `original/transhappy1.mp3` bis `transhappy7.mp3` | 839–844 und 53 | Freude über hinzugewonnene Lamas |
 | `original/transpissed1.mp3` bis `transpissed3.mp3` | 52, 51, 50 | Verärgerung über verlorene Lamas |
 
-45 Treffer-Varianten, zehn Stimmen und ein Ketteneffekt: insgesamt 56 Dateien.
-Alle MP3s wurden unverändert aus den Sound-Tags exportiert. Die unbenutzte
+45 Treffer-Varianten, zehn Stimmen, ein Ketteneffekt und fünf mechanische
+Effekte: insgesamt 61 Dateien aus dem Spiel, dazu ein ICQ-Nachrichtenton.
+Die Spielsounds stammen aus den Sound-Tags; bis auf den unten beschriebenen,
+aus zwei Originalsamples rekonstruierten Fall-Sound bleiben sie unverändert. Die unbenutzte
 BAR-Gruppe `fruit6` wird nicht ausgeliefert. Eine gemischte Auswahl verwendet
 alle Varianten einmal, bevor sie erneut gemischt wird, ohne direkte Wiederholung.
 
@@ -78,6 +80,55 @@ Die konkrete Zuordnung ist im exportierten Originalcode belegt:
 `fruit{sn}-{Variante}`. `frame_9` definiert die sieben Gruppen und deren Größen.
 `worshiper.prototype.ef` spielt bei Ankunft `transHappy1`–`7`;
 `DefineSprite_690/frame_1132` spielt `transPissed1`–`3`.
+
+### Mechanische Effekte und Chatton für 0.1.4
+
+Die mechanischen Samples stammen aus demselben SWF-Export. Beim Fallen wird
+die unten beschriebene Rekonstruktion `reference/stone-drop-original.mp3` verwendet. Die
+Zuordnung wurde in den `StartSound`-Tags der Sprite-Timelines geprüft
+(`java -jar ffdec.jar -swf2xml original.swf original.xml`):
+
+| Datei unter `public/audio/original/` | Sound-Tag | Original-Verwendung |
+| --- | --- | --- |
+| `../reference/stone-drop-original.mp3` | 895 + 896 | Sprite 914, „fall“, rekonstruiert |
+| `stone-slide.mp3` | 896 | Sprite 917, „pushCardLeft“ / „pushCardRight“ |
+| `stone-squeeze.mp3` | 900 | Sprite 914, „squeeze“ / seitliches Verschieben |
+| `stone-burst.mp3` | 806 | Sprite 832, „pizuz“ (kleiner Bruch) |
+| `stone-shatter.mp3` | 750 | Sprite 803, „pizuzGadol“ (große Explosion) |
+
+`stone-drop.mp3` wurde auf Wunsch zu einem schweren Steinaufprall überarbeitet:
+Der Originalanteil ist auf 70 % Tonhöhe abgesenkt, gekürzt und tiefpassgefiltert.
+Eine eigene synthetische Schicht ergänzt einen kurzen Fallansatz, einen tiefen
+Aufprall nach etwa 105 ms (abfallende Resonanz von 96 auf 52 Hz), körniges
+Steinrasseln und kurzen Nachhall mit 43/79 ms Verzögerung. Der Effekt klingt
+nach 0,95 s aus; Ausgabe: Mono-MP3, 44,1 kHz, 128 kbit/s. Er ist eine Bearbeitung
+des Originals und kein unverändertes Originalsample.
+
+Die erneute Prüfung der Original-Timeline zeigt: Sprite 914 startet bei
+„fall“, Frame 3, **895 und 896 gleichzeitig**, jeweils mit Lautstärkehüllkurve.
+895 läuft bis Sample 27939 (0,634 s); bei 896 wird der Ausschnitt zwischen
+Sample 6036 und 31689 verwendet (0,137–0,719 s). Diese Positionen beziehen sich
+auf die 44,1-kHz-Zeitbasis der SWF. Sprite 917 spielt beim „slideDown“ dagegen
+895 allein. Der reine Export liegt als `public/audio/reference/stone-drop-895.mp3`
+vor; `stone-drop-original.mp3` daneben ist eine Hörprobe aus beiden Samples mit
+angenäherten Originalausschnitten und Lautstärkeverläufen. Diese Rekonstruktion
+wird jetzt im Spiel für alle Fallereignisse verwendet. Die vorherige schwere
+Bearbeitung `original/stone-drop.mp3` bleibt als unbenutzte Variante erhalten.
+
+Beim Beginn des Seitenwechsels spielen ausschließlich `transhappy1–7` bei
+eigenem Lama-Zugewinn oder `transpissed1–3` bei Verlust an den Gegner. Die
+Zuordnung gilt für beide Sitzplätze und für ein oder mehrere Lamas pro Zug.
+Der Seitenwechsel beginnt nach den Steinkaskaden. Spiel und Server
+verwenden dieselbe Zeitleiste mit 330 ms Einschub, 210 ms Fall und 360 ms Bruch
+sowie 1900 ms für den Seitenwechsel. Zugbewegungen dauern doppelt so lang
+wie in 0.1.3; das kurze natürliche Blinzeln bleibt unverändert.
+
+Der separat ergänzte ICQ-Chatton `public/audio/icq-uh-oh.mp3` stammt von
+[Myinstants – ICQ Uh Oh](https://www.myinstants.com/es/instant/icq-uh-oh-46540/),
+[MP3-Datei](https://www.myinstants.com/media/sounds/icq-uh-oh.mp3), abgerufen am
+16.10.2026. Die lokale Fassung ist als MP3 eingebunden. Er spielt bei neuen fremden
+Nachrichten, nicht bei eigenen Nachrichten oder beim Laden des Verlaufs.
+Die bestehende Einschränkung zur nicht bestätigten freien Lizenz gilt auch hier.
 
 ### Erneuter Videoabgleich für 0.1.3
 
@@ -94,9 +145,11 @@ Dieser Abgleich unterstützt die Zuordnung trotz der gemischten Videotonspur:
 | 01:18,674 | `transhappy5` | 0,517 |
 
 Die Einzelsamples aus der SWF vermeiden die überlagerten Musik-/Spielsounds
-des Videos. Der Browser prüft das erfolgreiche Decodieren aller 56 Dateien.
+des Videos. Der Browser prüft das erfolgreiche Decodieren aller 62 Spieldateien.
 Die Wiedergabe startet pro tatsächlichem Zug, nicht beim Laden oder Reconnect.
-Neue Züge, Stummschalten und Raumwechsel verwerfen veraltete Audioereignisse.
+Laufende Samples werden durch neue Züge nicht abgeschnitten. Bei voller
+Kanalbelegung warten weitere Samples bis zum Ende eines laufenden Sounds.
+Stummschalten und Raumwechsel beenden Wiedergabe und ausstehende Ereignisse.
 Die positiven/verärgerten Stimmen orientieren sich an der Perspektive des
 jeweiligen Spielers. Die Zahl offener Audiokanäle ist begrenzt.
 

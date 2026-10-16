@@ -5,14 +5,21 @@ test('Resolved hits emit symbol sounds, stone fragments and exact points; follow
   test.setTimeout(90_000);
   const context = await browser.newContext({ viewport: { width: 1440, height: 1080 } });
   await context.addInitScript(() => {
-    const observed = { sounds: [] as string[], points: [] as number[], shards: 0, crossings: 0 };
+    const observed = { sounds: [] as string[], points: [] as number[], shards: 0, crossings: 0, shakes: 0, walks: 0, sparks: 0 };
     Object.assign(window, { observedFeedback: observed });
     HTMLMediaElement.prototype.play = function () { observed.sounds.push(this.src); return Promise.resolve(); };
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (frames, options) {
+      if (this.matches('.board-scene')) observed.shakes++;
+      if (this.matches('.mini-llama.is-crossing') && Array.isArray(frames) && frames[0].translate !== '0px 0') observed.walks++;
+      return animate.call(this, frames, options);
+    };
     document.addEventListener('DOMContentLoaded', () => {
       new MutationObserver(records => {
         for (const record of records) for (const node of record.addedNodes) if (node instanceof HTMLElement) {
           if (node.matches('.score-popup')) observed.points.push(Number(node.dataset.points));
           if (node.matches('.stone-fragment')) observed.shards++;
+          if (node.matches('.stone-spark,.stone-dust')) observed.sparks++;
         }
         observed.crossings = Math.max(observed.crossings, document.querySelectorAll('.is-crossing').length);
       }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
@@ -20,7 +27,7 @@ test('Resolved hits emit symbol sounds, stone fragments and exact points; follow
   });
   const a = await context.newPage(), b = await context.newPage();
   const errors: string[] = []; for (const p of [a, b]) p.on('pageerror', error => errors.push(error.message));
-  await a.goto('/'); await a.locator('#sound').click(); await a.locator('#name').fill('Alex'); await a.locator('#create').click();
+  await a.goto('/'); await a.locator('#theme-toggle').click(); await a.locator('#name').fill('Alex'); await a.locator('#create').click();
   await expect(a.locator('#room-code')).toHaveText(/^[A-F0-9]{8}$/);
   await b.goto(await a.locator('#invite-link').inputValue());
   if (await b.locator('#sound').getAttribute('aria-pressed') !== 'true') await b.locator('#sound').click();
@@ -65,11 +72,13 @@ test('Resolved hits emit symbol sounds, stone fragments and exact points; follow
   const second = await b.evaluate(() => (window as any).observedFeedback);
   expect(first.points.reduce((sum: number, value: number) => sum + value, 0)).toBe(points);
   expect(first.shards).toBeGreaterThan(0); expect(first.crossings).toBeGreaterThan(0);
+  expect(first.walks).toBeGreaterThan(0); expect(first.shakes).toBeGreaterThan(0); expect(first.sparks).toBeGreaterThan(0);
   expect(first.sounds.some((src: string) => /fruit[123457]-/.test(src))).toBe(true);
   expect([first, second].some(f => f.sounds.some((src: string) => /transhappy/.test(src)))).toBe(true);
   expect([first, second].some(f => f.sounds.some((src: string) => /transpissed/.test(src)))).toBe(true);
   await a.locator('#motion-toggle').click(); await expect(a.locator('.stone-fragment,.score-popup,.is-crossing')).toHaveCount(0);
   expect(await a.locator('#herd-llamas').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length)).toBe(0);
+  expect(await a.locator('.board-scene').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length)).toBe(0);
   await a.locator('#voices-toggle').click(); await expect(a.locator('#voices-toggle')).toHaveAttribute('aria-pressed', 'false');
   expect(errors).toEqual([]); await context.close();
 });
@@ -95,4 +104,38 @@ test('Herd blinks like the RPS figures and stops every idle motion when disabled
   await page.clock.fastForward(20000);
   expect(await page.evaluate(() => (window as any).herdAnimationCalls.length)).toBe(count);
   expect(await page.locator('#herd-llamas').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length)).toBe(0);
+});
+
+test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone crush', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(window, { mechanicalSounds: [] });
+    HTMLMediaElement.prototype.play = function () { (window as any).mechanicalSounds.push(this.src); return Promise.resolve(); };
+  });
+  await page.goto('/');
+  for (const id of ['theme-toggle', 'voices-toggle', 'sound', 'motion-toggle']) {
+    const button = page.locator('#' + id);
+    if (await button.getAttribute('aria-pressed') !== 'true') await button.click();
+    await expect(button).toHaveCSS('color', 'rgb(36, 82, 11)');
+    await button.click(); await expect(button).toHaveAttribute('aria-pressed', 'false');
+    await button.click();
+  }
+  await page.locator('#name').fill('Steinmetz'); await page.locator('#practice').click();
+  await expect(page.locator('.move-button:enabled')).toHaveCount(15);
+  expect(await page.locator('.move-button').evaluateAll(buttons => buttons.every(button => getComputedStyle(button).opacity === '0'))).toBe(true);
+  const target = page.locator('[data-move="top:0"]'); await target.hover();
+  await expect(page.locator('.move-button.active-arrow')).toHaveCount(1);
+  await expect(target).toHaveCSS('opacity', '1');
+  await page.locator('[data-move="left:2"]').hover();
+  await expect(page.locator('.move-button.active-arrow')).toHaveCount(1);
+  await expect(target).toHaveCSS('opacity', '0');
+  const next = await page.locator('#next-tiles>div').first().locator('img').getAttribute('src');
+  await target.click();
+  await expect(page.locator('.ejected-stone')).toHaveCount(1);
+  await expect.poll(() => page.locator('#queue-wheel').evaluate(el => el.getAnimations().some(animation => animation.playState === 'running'))).toBe(true);
+  await expect(page.locator('#current-tile img')).toHaveAttribute('src', next!);
+  await expect.poll(() => page.evaluate(() => (window as any).mechanicalSounds.some((src: string) => src.endsWith('stone-burst.mp3')))).toBe(true);
+  await expect(page.locator('.ejected-stone')).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/stone-wheel-retro.png', fullPage: true });
+  await page.locator('#theme-toggle').click();
+  await page.screenshot({ path: 'test-results/stone-wheel-modern.png', fullPage: true });
 });

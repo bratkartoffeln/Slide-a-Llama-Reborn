@@ -1,5 +1,6 @@
 import { llama, follower } from './art';
 import type { Seat } from '../shared/game';
+import { FEEDBACK_TIMING } from '../shared/feedback';
 
 /** Stable identities let a converted follower actually walk from its old slot. */
 export class HerdMotion {
@@ -26,7 +27,7 @@ export class HerdMotion {
       if (dx || converted) this.animate(element, converted ? [
         { translate: `${dx}px 0`, rotate: '0deg' }, { translate: `${dx * .75}px -5px`, rotate: '-3deg', offset: .25 },
         { translate: `${dx * .5}px 0`, rotate: '3deg', offset: .5 }, { translate: `${dx * .25}px -5px`, rotate: '-2deg', offset: .75 }, { translate: '0 0', rotate: '0deg' }
-      ] : [{ translate: `${dx}px 0` }, { translate: '0 0' }], converted ? 950 : 450, () => element.classList.remove('is-crossing'));
+      ] : [{ translate: `${dx}px 0` }, { translate: '0 0' }], converted ? FEEDBACK_TIMING.transfer : 900, () => element.classList.remove('is-crossing'));
     }
     this.refresh();
   }
@@ -44,7 +45,7 @@ export class HerdMotion {
         if (variant < .5) {
           figure.querySelectorAll('.llama-eyes').forEach(eyes => this.animate(eyes, [{ scale: '1 1' }, { scale: '1 .05', offset: .35 }, { scale: '1 .05', offset: .65 }, { scale: '1 1' }], 160));
           figure.querySelectorAll('.retro-eyelid').forEach(eyes => this.animate(eyes, [{ opacity: 0 }, { opacity: 1, offset: .2 }, { opacity: 1, offset: .8 }, { opacity: 0 }], 160));
-        } else this.animate(figure, [{ scale: '1 1', rotate: '0deg' }, { scale: variant < .75 ? '1.015 .975' : '.992 1.01', rotate: variant < .75 ? '0deg' : '1.3deg', offset: .5 }, { scale: '1 1', rotate: '0deg' }], 1000);
+        } else this.animate(figure, [{ scale: '1 1', rotate: '0deg' }, { scale: variant < .75 ? '1.015 .975' : '.992 1.01', rotate: variant < .75 ? '0deg' : '1.3deg', offset: .5 }, { scale: '1 1', rotate: '0deg' }], 2000);
       }
       this.schedule(figure, 5000 + Math.random() * 10000);
     }, delay);
