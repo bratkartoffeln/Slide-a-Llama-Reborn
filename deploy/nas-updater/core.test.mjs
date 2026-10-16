@@ -59,6 +59,7 @@ async function transaction(t,failAt) {
   u.acquireMaintenance=async()=>({acquired:failAt!=='busy',legacy:false});
   u.releaseMaintenance=async()=>events.push('release');
   u.docker=async()=>{};
+  u.cleanupDanglingImages=async()=>events.push('cleanup');
   u.snapshotSources=async()=>events.push('backup');
   u.deployment=async()=>null;
   u.compose=async image=>{events.push(image==='old-image'?'rollback':'activate');if(failAt==='activate'&&image!=='old-image')throw Error('activation failed');};
@@ -83,4 +84,35 @@ test('Installed SHA is persisted only after image health and source installation
   const x=await transaction(t);await x.u.perform(x.args);
   assert.equal(x.state.installed_sha,'a'.repeat(40));assert.equal(x.events.includes('rollback'),false);
   assert.equal(JSON.parse(await readFile(join(x.dir,'state.json'))).installed_sha,'a'.repeat(40));
+});
+
+test('Successful update cleans images only after installed state has been saved',async t=>{
+  const x=await transaction(t);
+  x.u.cleanupDanglingImages=async()=>{
+    const saved=JSON.parse(await readFile(join(x.dir,'state.json')));
+    assert.equal(saved.installed_sha,x.args.sha);
+    assert.ok(x.events.includes('copy-new'));
+    x.events.push('cleanup');
+  };
+  await x.u.perform(x.args);
+  assert.deepEqual(x.events,['build','candidate','backup','activate','copy-new','cleanup','release']);
+});
+
+test('Cleanup prunes only unused dangling images and logs reclaimed space',async()=>{
+  const logs=[];const u=new Updater({log:message=>logs.push(message)});const calls=[];
+  u.docker=async args=>{calls.push(args);return 'Total reclaimed space: 123MB';};
+  await u.cleanupDanglingImages();
+  assert.deepEqual(calls,[['image','prune','--force']]);
+  assert.ok(logs.some(message=>message.includes('Total reclaimed space: 123MB')));
+});
+
+test('Docker cleanup failure cannot fail or roll back an installed update',async t=>{
+  const x=await transaction(t);const logs=[];x.u.log=message=>logs.push(message);
+  x.u.cleanupDanglingImages=Updater.prototype.cleanupDanglingImages.bind(x.u);
+  x.u.docker=async args=>{if(args[1]==='prune')throw Error('prune already running');};
+  await x.u.perform(x.args);
+  const saved=JSON.parse(await readFile(join(x.dir,'state.json')));
+  assert.equal(saved.installed_sha,x.args.sha);assert.equal(saved.failed_sha,null);
+  assert.equal(x.events.includes('rollback'),false);
+  assert.ok(logs.some(message=>message.includes('cleanup failed; installed update retained')));
 });

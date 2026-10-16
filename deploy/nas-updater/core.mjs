@@ -67,6 +67,16 @@ export class Updater {
   async docker(args,options={}) {
     const {stdout}=await exec('docker',args,{timeout:180000,maxBuffer:4*1024*1024,...options});return stdout.trim();
   }
+  async cleanupDanglingImages() {
+    try {
+      // Without --all Docker removes only untagged images unused by any container.
+      // Tagged releases and the rollback image stay available.
+      const result=await this.docker(['image','prune','--force']);
+      this.log('Unused dangling Docker image cleanup complete.'+(result?'\n'+result:''));
+    } catch(e) {
+      this.log('Dangling Docker image cleanup failed; installed update retained: '+e.message);
+    }
+  }
   async inspect() {
     const data=JSON.parse(await this.docker(['inspect',GAME]))[0];
     if(data.Name!=='/'+GAME || data.Config.Labels?.['com.docker.compose.project']!==PROJECT || data.Config.Labels?.['com.docker.compose.service']!=='game')throw new Error('Target container identity mismatch');
@@ -252,6 +262,7 @@ export class Updater {
         if(id){await this.report(id,'success');if(runId){state.last_manual_run=runId;await atomicJSON(this.stateRoot+'/state.json',state);}}
       } catch(e){this.log('Installed successfully; GitHub receipt will be retried: '+e.message);}
       this.log('Update successful: '+sha+' version '+pkg.version);
+      await this.cleanupDanglingImages();
     } catch(e) {
       this.log('Update failed: '+e.message);
       if(changed) {
