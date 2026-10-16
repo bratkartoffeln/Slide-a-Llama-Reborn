@@ -1,0 +1,37 @@
+name: slide-a-llama-updater
+services:
+  updater:
+    image: slide-a-llama-updater:1
+    build: .
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30m
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "node", "-e", "const fs=require('fs');try{const h=JSON.parse(fs.readFileSync('/share/Container/slide-a-llama/.slide-updater/heartbeat.json'));process.exit(Date.now()-Date.parse(h.time)<3600000?0:1)}catch{process.exit(1)}"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+    volumes:
+      - type: bind
+        source: /share/Container/slide-a-llama
+        target: /share/Container/slide-a-llama
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      - type: bind
+        source: /share/CACHEDEV1_DATA/.qpkg/container-station/usr/bin/.libs/docker
+        target: /usr/local/bin/docker
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /share/CACHEDEV1_DATA/.qpkg/container-station/usr/local/lib/docker/cli-plugins/docker-compose
+        target: /usr/local/lib/docker/cli-plugins/docker-compose
+        read_only: true
+        bind:
+          create_host_path: false

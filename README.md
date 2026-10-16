@@ -1,8 +1,8 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.1** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
-Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche, eigene
-SVG-Grafiken, Maus-, Touch- und Tastaturbedienung.
+Version **0.1.2** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
+Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
 ## Starten
 
@@ -33,8 +33,9 @@ Bereitschaft und die gemeinsame Version aus `package.json`.
 ## Spielen
 
 - 5×5-Feld, abwechselnd Steine von oben, links oder rechts einschieben.
-- Volle Streifen verlieren den Stein am gegenüberliegenden Rand. Steine fallen
-  nach unten; leere Felder werden nicht zufällig aufgefüllt.
+- Nur zusammenhängende Steine werden geschoben, bis zur ersten Lücke. Steine
+  dahinter bleiben stehen. Lückenlos volle Streifen verlieren den letzten Stein.
+  Anschließend fallen Steine nach unten; leere Felder werden nicht zufällig aufgefüllt.
 - Drei gleiche Symbole geben Punkte; vier zählen ×2, fünf ×3. Weitere Kaskaden
   multiplizieren die Punkte zusätzlich mit ×2, ×3 usw.
 - Je 60 Punkte Vorsprung wechselt ein Lama die Seite. 300 Punkte Vorsprung gewinnen
@@ -48,6 +49,25 @@ Die sechs Symbole zählen 10/20/30/40/50/60 Punkte pro Dreierreihe.
 Punktetabelle, Symbolhäufigkeiten und Zeitwahl sind eigene Abstimmungen dieser
 Version. Der Poker-Modus mancher Originalausgaben ist nicht enthalten.
 Grundlage und Quellen: [SPIELREGELN.md](SPIELREGELN.md).
+
+## Layout, Animationen und Ton
+
+Oben mit **ICQ-Retro** zwischen modernem Design und klassischer Darstellung
+wechseln, auch während einer Partie. Der Retro-Modus verwendet recherchierte
+Tempel-, Landschafts-, Figuren- und Symbolgrafiken mit ICQ-artigen Fensterrahmen.
+Banane, Pflaume und Birne ersetzen darin optisch Zitrone, Traube und Melone;
+Punkte und Spielzustand bleiben gleich.
+
+**✦** schaltet Einschub-, Fall-, Trefferketten-, Lamawechsel- und Sieganimationen
+an oder aus. Ausschalten beendet laufende Animationen sofort; der endgültige
+Spielstand erscheint direkt. Die Systemeinstellung für reduzierte Bewegung
+hat Vorrang. **♪** schaltet separat die Effekte ein; Ton ist zunächst aus.
+Im Retro-Modus kommen drei aus der archivierten Flash-Fassung extrahierte
+Originaleffekte für Treffer, Ketten und Lamawechsel hinzu. Layout, Animationen
+und Ton werden lokal gespeichert. Beide Spieler wählen unabhängig voneinander.
+
+Bildquellen, Gameplay-Videos, Extraktion und Zuordnung der Medien:
+[RETRO-QUELLEN.md](RETRO-QUELLEN.md).
 
 ## Multiplayer und Chat
 
@@ -94,3 +114,6 @@ Er löst kein NAS-Deployment aus. NAS, TLS und Porttrennung zu RPS:
 
 Aufteilung: `shared/` Regeln/Protokoll, `server/` Räume/Chat/HTTP,
 `client/` Darstellung/Verbindung, `tests/` Regel-, Server- und Browsertests.
+
+Automatische NAS-Updates nach erfolgreichen main-Prüfungen und bei freien Spielräumen:
+[QNAP-AUTOUPDATE.md](QNAP-AUTOUPDATE.md). Der Updater läuft als eigener Container.

@@ -1,4 +1,4 @@
-﻿# Regelgrundlage und Entscheidungen für 0.1.1
+﻿# Regelgrundlage und Entscheidungen für 0.1.2
 
 Umgesetzt ist der Früchte-/Slots-Modus mit eigener Darstellung. Recherche: 16.10.2026.
 
@@ -10,9 +10,10 @@ Die [Slots-Adaption bei Nejlepší hry](https://www.nejlepsihry.cz/hry/slide-a-l
 beschreibt Schwerkraft, Kaskaden, ×2 für vier bzw. ×3 für fünf gleiche Symbole
 und 300 Punkte Vorsprung zum Sieg.
 
-Original-Punktetabelle und Zufallsverteilung waren aus diesen Quellen nicht
-vollständig zuverlässig rekonstruierbar. Folgende Entscheidungen sind im Spiel
-einsehbar und in `shared/game.ts` zentral festgelegt:
+Die erste Fassung verwendet eine eigene Punkte- und Zufallsabstimmung, die auch
+im Retro-Modus gilt. Die zusätzliche Videorecherche zeigt eine abweichende
+Originaltabelle mit sieben Symbolen; siehe `RETRO-QUELLEN.md`. Folgende Werte
+sind im Spiel einsehbar und in `shared/game.ts` zentral festgelegt:
 
 | Symbol | Punkte für 3 / 4 / 5 | Zufallsgewicht |
 | --- | --- | --- |
@@ -25,6 +26,12 @@ einsehbar und in `shared/game.ts` zentral festgelegt:
 
 Kaskaden werden mit ihrer laufenden Nummer multipliziert. Gleichzeitige horizontale
 und vertikale Linien zählen beide; ihr gemeinsames Feld wird nur einmal entfernt.
+Beim Einschub wird nur die vom Rand aus direkt zusammenhängende
+Steinkette bis zur ersten Lücke verschoben. Steine hinter dieser Lücke werden
+nicht mitgeschoben. Ist der Randplatz bereits leer, wird nur dort eingesetzt.
+Nur ein lückenlos voller Streifen verliert seinen letzten Stein. Beispiel links:
+`[Kirsche, Zitrone, leer, Melone, Sieben]` + Glocke ergibt vor der Schwerkraft
+`[Glocke, Kirsche, Zitrone, Melone, Sieben]`.
 Nach dem Entfernen fallen Steine, ohne zufällige Auffüllung. Der Start enthält
 25 Steine und keine fertigen Linien. Lamas folgen der aktuellen Punktedifferenz;
 ein geschrumpfter Vorsprung kann sie wieder zurückbringen.
@@ -37,5 +44,6 @@ Neuauflage, keine Behauptung vollständiger Originaltreue. Poker ist nicht entha
 Aus RPS übernommen wurden die Erfahrungen mit serverseitiger Zugprüfung,
 privaten Räumen, zeitlich begrenzter Wiederverbindung, Chat-Deduplizierung und
 sicherer Textausgabe. Hier verwendet das Netzwerk direkt WebSockets (`ws`).
-Die Darstellung besteht aus eigenen SVGs; Originalgrafiken und Sounds wurden
-nicht eingebunden.
+Das moderne Layout verwendet eigene SVGs. Der optionale Retro-Modus ergänzt
+recherchierte Originalgrafiken und extrahierte Effekte; Herkunft, Gameplay-Videos
+und Unterschiede zur Originalfassung stehen in [RETRO-QUELLEN.md](RETRO-QUELLEN.md).

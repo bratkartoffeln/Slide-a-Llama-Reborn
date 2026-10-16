@@ -7,6 +7,9 @@ test('Two browsers play, exchange safe chat, reconnect after reload, and agree o
   await host.goto('/'); await host.locator('#name').fill('Alex'); await host.locator('#create').click();
   await expect(host.locator('#room-code')).toHaveText(/^[A-F0-9]{8}$/);
   const invite = await host.locator('#invite-link').inputValue();
+  await host.locator('#theme-toggle').click();
+  await expect(host.locator('body')).toHaveAttribute('data-theme', 'retro');
+  await expect(host.locator('#invite-link')).toHaveValue(invite);
   await guest.goto(invite); await guest.locator('#name').fill('Sam'); await guest.getByRole('button', { name: 'Raum beitreten' }).click();
   await expect(host.locator('#turn-label')).toContainText('Du bist dran');
   await expect(guest.locator('.move-button:enabled')).toHaveCount(0);
@@ -43,6 +46,47 @@ test('Mobile lobby, rules, training and touch targets fit without horizontal scr
   await expect(page.locator('#turn-label')).toContainText('Du bist dran', { timeout: 8000 });
   await expect(page.locator('.move-button:enabled')).toHaveCount(15);
   await page.screenshot({ path: 'test-results/mobile-game.png', fullPage: true });
+  await expect(page.locator('.retro-follower:visible')).toHaveCount(0);
+  await page.locator('#theme-toggle').click();
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'retro');
+  expect(await page.locator('.retro-temple').evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+  await page.screenshot({ path: 'test-results/mobile-retro.png', fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(errors).toEqual([]); await context.close();
+});
+test('Theme and motion preferences persist, and disabling animations settles an active move', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#theme-toggle').click();
+  await page.locator('#name').fill('Retro'); await page.locator('#practice').click();
+  await expect(page.locator('#turn-label')).toContainText('Du bist dran');
+  await page.getByRole('button', { name: 'Spalte 3 von oben einschieben' }).click();
+  await page.locator('#motion-toggle').click();
+  await expect(page.locator('body')).toHaveClass(/motion-off/);
+  await expect(page.locator('#motion-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#turn-label')).toContainText('Du bist dran', { timeout: 8000 });
+  await expect(page.locator('.move-button:enabled')).toHaveCount(15);
+  expect(await page.locator('#board-controls').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length)).toBe(0);
+  const code = await page.locator('#room-code').textContent();
+  await page.reload();
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'retro');
+  await expect(page.locator('body')).toHaveClass(/motion-off/);
+  await expect(page.locator('#room-code')).toHaveText(code!);
+  expect(await page.locator('.retro-art').evaluateAll((images: HTMLImageElement[]) => images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
+  const audio = await page.evaluate(async () => {
+    const context = new AudioContext();
+    try {
+      return await Promise.all(['match', 'combo', 'transfer'].map(async cue => {
+        const response = await fetch(`/audio/retro-${cue}.mp3`);
+        const buffer = await context.decodeAudioData(await response.arrayBuffer());
+        return response.headers.get('content-type') === 'audio/mpeg' && buffer.duration > 0;
+      }));
+    } finally { await context.close(); }
+  });
+  expect(audio).toEqual([true, true, true]);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.locator('#motion-toggle')).toBeDisabled();
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await expect(page.locator('#motion-toggle')).toBeEnabled();
+  await page.locator('#motion-toggle').click();
+  await expect(page.locator('body')).not.toHaveClass(/motion-off/);
 });

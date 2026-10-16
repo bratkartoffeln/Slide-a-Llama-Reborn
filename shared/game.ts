@@ -67,22 +67,29 @@ export function findMatches(board: Board): Match[] {
   }
   return matches;
 }
-export function insert(board: Board, tile: Tile, move: Move): Board {
+/** Apply contact-only pushing before gravity, also used by the client animation. */
+export function push(board: Board, tile: Tile, move: Move): Board {
   const next = cloneBoard(board);
   if (move.side === 'top') {
-    // A top tile falls into the first free cell; a full column loses its bottom tile.
-    const first = next.findIndex(row => row[move.lane] !== null);
-    if (first === -1) next[SIZE - 1][move.lane] = tile;
-    else if (first > 0) next[first - 1][move.lane] = tile;
-    else {
-      for (let r = SIZE - 1; r > 0; r--) next[r][move.lane] = next[r - 1][move.lane];
-      next[0][move.lane] = tile;
-    }
+    const empty = next.findIndex(row => row[move.lane] === null);
+    const gap = empty < 0 ? SIZE - 1 : empty;
+    for (let r = gap; r > 0; r--) next[r][move.lane] = next[r - 1][move.lane];
+    next[0][move.lane] = tile;
   } else {
     const row = next[move.lane];
-    if (move.side === 'left') { row.unshift(tile); row.pop(); }
-    else { row.push(tile); row.shift(); }
+    const from = move.side === 'left' ? 0 : SIZE - 1;
+    const step = move.side === 'left' ? 1 : -1;
+    let gap = from;
+    while (gap >= 0 && gap < SIZE && row[gap] !== null) gap += step;
+    // Only the touching chain moves. Pieces beyond the first gap stay put.
+    if (gap < 0 || gap >= SIZE) gap = from + step * (SIZE - 1);
+    for (let c = gap; c !== from; c -= step) row[c] = row[c - step];
+    row[from] = tile;
   }
+  return next;
+}
+export function insert(board: Board, tile: Tile, move: Move): Board {
+  const next = push(board, tile, move);
   gravity(next);
   return next;
 }

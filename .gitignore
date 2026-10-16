@@ -9,3 +9,5 @@ secrets/
 .nas-update.lock/
 test-results/
 playwright-report/
+
+/.slide-updater/
