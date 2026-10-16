@@ -49,7 +49,7 @@ body[data-theme=retro] .voices-toggle{font-size:10px;padding:7px}
 @media(prefers-reduced-motion:reduce){.board-effects{display:none}}
 body.motion-off .board-effects{display:none}
 
-/* Four stone pockets on a carved wheel; the current stone is at twelve o'clock. */
+/* Four stone pockets; the next stone to insert is enlarged at the bottom. */
 .tile-queue,body[data-theme=retro] .tile-queue{display:flex;justify-content:center;align-items:center;gap:20px;padding:16px 8px 0;margin:0;background:none;border:0}
 .queue-wheel{position:relative;flex:none;width:174px;height:174px;transform-origin:center}
 .wheel-plate{position:absolute;inset:17px;border-radius:50%;background:repeating-conic-gradient(from 12deg,#8e714f55 0deg 2deg,transparent 2deg 30deg),radial-gradient(circle,#ad8b58 0 13%,#f3deb0 14% 19%,#c7aa71 20% 55%,#e9d2a0 56% 66%,#9a7c50 67% 71%,#e4c78b 72%);border:4px solid #b49762;box-shadow:inset 0 3px 4px #fff1c9,0 5px 0 #81643f,0 7px 7px #352b2726}
@@ -57,11 +57,11 @@ body.motion-off .board-effects{display:none}
 .wheel-plate b{position:absolute;inset:0;display:grid;place-items:center;color:#79582d;font-size:22px;text-shadow:0 1px #ffe9ad}
 .queue-wheel .current-tile{position:absolute;left:50%;top:0;transform:translateX(-50%);gap:0;z-index:1}
 .queue-wheel .current-tile>span{position:absolute;left:50%;top:-13px;transform:translateX(-50%);white-space:nowrap}
-.queue-wheel .current-tile>div,body[data-theme=retro] .queue-wheel .current-tile>div{width:43px;height:43px;border:2px solid #ad7641;background:#fff6db;border-radius:5px;box-shadow:0 3px 0 #8c683a,0 0 0 3px #f4d89b}
+.queue-wheel .current-tile>div,body[data-theme=retro] .queue-wheel .current-tile>div{width:48px;height:48px;border:2px solid #ad7641;background:#fff6db;border-radius:5px;box-shadow:0 3px 0 #8c683a,0 0 0 3px #f4d89b}
 .queue-wheel .next-tiles{display:contents}
 .queue-wheel .next-tiles>span{position:absolute;right:-20px;top:30px;font-size:7px}
 .queue-wheel #next-tiles{display:contents}
-.queue-wheel #next-tiles>div,body[data-theme=retro] .queue-wheel #next-tiles>div{position:absolute;width:38px;height:38px;background:#f5e8c8;border:1px solid #b09058;border-radius:4px;box-shadow:0 3px 0 #937343}
+.queue-wheel #next-tiles>div,body[data-theme=retro] .queue-wheel #next-tiles>div{position:absolute;width:34px;height:34px;background:#f5e8c8;border:1px solid #b09058;border-radius:4px;box-shadow:0 3px 0 #937343}
 .queue-wheel #next-tiles>div:nth-child(1){right:0;top:50%;transform:translateY(-50%)}
 .queue-wheel #next-tiles>div:nth-child(2){bottom:0;left:50%;transform:translateX(-50%)}
 .queue-wheel #next-tiles>div:nth-child(3){left:0;top:50%;transform:translateY(-50%)}
@@ -85,11 +85,11 @@ body[data-theme=retro] .wheel-plate{filter:saturate(1.4);border-color:#b79526}
 .temple-stage .tile-queue,body[data-theme=retro] .temple-stage .tile-queue{position:absolute;right:-8px;top:36px;width:88px;padding:0;margin:0;display:block;border:0;background:none}
 .wheel-window{width:88px;height:204px;overflow:hidden}
 .queue-wheel{margin-top:15px}
-.queue-wheel .current-tile{left:60px}
+.queue-wheel .current-tile{left:60px;top:auto;bottom:0}
 .queue-wheel .next-tiles>span{display:none}
-.queue-wheel #next-tiles>div:nth-child(1){left:0;right:auto;top:45px;transform:none}
-.queue-wheel #next-tiles>div:nth-child(2){left:0;bottom:auto;top:105px;transform:none}
-.queue-wheel #next-tiles>div:nth-child(3){left:40px;bottom:0;top:auto;transform:none}
+.queue-wheel #next-tiles>div:nth-child(1){left:0;right:auto;top:105px;transform:none}
+.queue-wheel #next-tiles>div:nth-child(2){left:0;bottom:auto;top:45px;transform:none}
+.queue-wheel #next-tiles>div:nth-child(3){left:40px;bottom:auto;top:0;transform:none}
 .temple-stage .queue-hint{display:none}
 .waiting-stone{position:absolute;z-index:8;pointer-events:none}.waiting-stone>.tile{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
 .board-effects:has(.waiting-stone){overflow:visible}
@@ -105,3 +105,32 @@ body[data-theme=retro] .wheel-plate{filter:saturate(1.4);border-color:#b79526}
 .result-card .button{width:100%;margin-top:12px}.result-card h3{margin:8px 0;font-size:21px}
 body[data-theme=retro] .result-card{background:#ececd6;border:3px solid;border-color:#fff #646951 #646951 #fff;border-radius:0;box-shadow:5px 5px #15334d88}
 @media(max-width:680px){.temple-stage{padding-right:48px}.temple-stage .tile-queue,body[data-theme=retro] .temple-stage .tile-queue{transform:scale(.7);transform-origin:top right;right:-7px;top:25px}.result-card{padding:24px}}
+
+/* ICQ result stage: absolute red/blue teams, with the winner celebrating. */
+.result-card{--result-inset:26px;padding:var(--result-inset);overflow:hidden}
+.result-titlebar{display:flex;align-items:center;gap:6px;margin:calc(-1 * var(--result-inset)) calc(-1 * var(--result-inset)) 19px;padding:6px 8px;background:linear-gradient(#d5f792,#8bbd3d);border-bottom:1px solid #6c8a3c;color:#234e14;text-align:left;font:bold 11px Tahoma,sans-serif}
+.result-titlebar img{width:19px;height:19px}.result-titlebar>span{margin-left:auto;white-space:nowrap}
+.endgame-scene{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 12px;padding:14px 4px 8px;min-height:180px;background:linear-gradient(#90cde7aa,#ffea8abf 75%,#a5b568),url('/retro/landscape.png') center/cover;border:2px solid;border-color:#939f72 #fff9d8 #fff9d8 #939f72;overflow:hidden}
+.endgame-team{position:relative;min-width:0;margin:0;z-index:1}
+.endgame-herd{height:105px;display:flex;align-items:flex-end;justify-content:center;gap:1px}
+.endgame-llama{display:block;width:43px;height:86px;transform-origin:center bottom;animation-delay:calc(var(--i) * -190ms)}
+.result-actor{display:block;width:100%;height:100%;transform-origin:center bottom}
+.endgame-scene .retro-follower{display:block;width:100%;height:100%}
+.endgame-team[data-team="1"] .result-actor{transform:scaleX(-1)}
+.endgame-team[data-mood=happy] .endgame-llama{animation:result-llama-hop 1.6s ease-in-out infinite;animation-delay:calc(var(--i) * -190ms)}
+.endgame-team[data-mood=happy] .retro-follower{animation:result-llama-cheer 1.6s ease-in-out infinite;animation-delay:calc(var(--i) * -190ms);transform-origin:center bottom}
+.endgame-team[data-mood=sad] .endgame-llama{transform:translateY(7px) rotate(9deg);animation:result-llama-sigh 3.6s ease-in-out infinite;animation-delay:calc(var(--i) * -240ms)}
+.endgame-team[data-mood=sad] .retro-follower{filter:saturate(.65);transform:scale(.98,.94);transform-origin:center bottom}
+.endgame-scene .retro-eyelid{animation:result-llama-blink 7s linear infinite;animation-delay:calc(var(--i) * -1.7s)}
+.endgame-team figcaption{font-size:11px;font-weight:700;color:#a13539;overflow-wrap:anywhere;margin-top:10px;line-height:1.3}
+.endgame-team[data-team="1"] figcaption{color:#3e56a7}.endgame-team figcaption small{display:block;font-size:7px;letter-spacing:1px;margin-top:3px;color:#505b30}
+.result-confetti{position:absolute;inset:0;pointer-events:none;z-index:2}.result[data-outcome=lost] .result-confetti{display:none}
+.result-confetti i{position:absolute;top:-12px;left:calc(var(--i) * 7%);width:5px;height:9px;background:var(--confetti-color);animation:result-confetti 2.4s ease-in 3 both;animation-delay:calc(var(--i) * 90ms)}
+@keyframes result-llama-hop{0%,55%,100%{translate:0 0}20%{translate:0 -16px}35%{translate:0 1px}42%{translate:0 -6px}}
+@keyframes result-llama-cheer{0%,55%,100%{scale:1 1;rotate:0deg}12%{scale:1.04 .94;rotate:-4deg}22%{scale:.97 1.04;rotate:4deg}35%{scale:1.04 .96;rotate:-2deg}}
+@keyframes result-llama-sigh{0%,100%{translate:0 0;scale:1 1}45%{translate:0 3px;scale:1.02 .96}65%{translate:0 1px;scale:1 1}}
+@keyframes result-llama-blink{0%,93%,97%,100%{opacity:0}94%,96%{opacity:1}}
+@keyframes result-confetti{0%{translate:0 -8px;rotate:0deg;opacity:0}8%{opacity:1}85%{opacity:.9}100%{translate:-14px 190px;rotate:260deg;opacity:0}}
+@media(max-width:680px){.result-card{--result-inset:20px}.endgame-herd{height:95px}.endgame-llama{width:37px;height:76px}.endgame-scene{min-height:165px}.result-card h2{font-size:30px}.result-card h3{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.endgame-scene *{animation:none!important}.result-confetti{display:none}}
+body.motion-off .result-confetti{display:none}

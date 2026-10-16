@@ -142,11 +142,18 @@ test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone
   const rowBefore = await page.locator('#board-controls [data-row="1"][data-col="0"] img').getAttribute('src');
   const wheelWindow = await page.locator('.wheel-window').boundingBox(), wheel = await page.locator('#queue-wheel').boundingBox();
   expect(wheelWindow!.width).toBeLessThan(wheel!.width * .55);
+  const currentStone = await page.locator('#current-tile').boundingBox();
+  for (const stone of await page.locator('#next-tiles>div').all()) {
+    const bounds = (await stone.boundingBox())!;
+    expect(currentStone!.width).toBeGreaterThan(bounds.width);
+    expect(currentStone!.y + currentStone!.height).toBeGreaterThan(bounds.y + bounds.height);
+  }
   await target.click();
   await expect(page.locator('.board-scene')).toHaveAttribute('data-motion-phase', 'cracking');
   await expect(page.locator('.stone-cracks')).toHaveCount(1);
   await expect(page.locator('#board-controls [data-row="1"][data-col="0"] img')).toHaveAttribute('src', rowBefore!);
   await expect.poll(() => page.locator('#queue-wheel').evaluate(el => el.getAnimations().some(animation => animation.playState === 'running'))).toBe(true);
+  expect(await page.locator('#queue-wheel').evaluate(el => (el.getAnimations()[0].effect as KeyframeEffect).getKeyframes()[0].rotate)).toBe('45deg');
   await page.screenshot({ path: 'test-results/stone-cracking.png', fullPage: true });
   await expect(page.locator('.board-scene')).toHaveAttribute('data-motion-phase', 'bursting');
   await expect(page.locator('#board-controls [data-row="1"][data-col="0"] img')).toHaveAttribute('src', rowBefore!);

@@ -1,6 +1,6 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.7** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.8** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
 Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
@@ -68,6 +68,8 @@ Bei voller Spalte bekommt zunächst der unterste Stein Risse und zerplatzt;
 erst danach rutscht der Stapel nach. In freien Spalten fällt der neue Stein
 ohne Zwischenstopp bis zu seinem Ziel. Der Fall-Sound erklingt beim Landen.
 Die Vorschau sitzt auf einem Drehrad, das rechts neben dem Tempel halb sichtbar ist.
+Der direkt einzuschiebende Stein steht unten und ist größer als die folgenden
+Steine; beim Nachrücken dreht sich das Rad gegen den Uhrzeigersinn.
 Nur der gerade gewählte Einschubpfeil ist sichtbar; alle Touchflächen bleiben erhalten.
 Die Lamas wechseln tatsächlich ihre Plätze, wippen beim Laufen und blinzeln
 im Stand mit voneinander unabhängigen Ruhebewegungen.
@@ -95,6 +97,10 @@ Identische mechanische Sounds spielen pro Zug nur einmal; wiederholte
 Zustandsmeldungen lösen keine zweite Wiedergabe aus. Nach Rundenende bleibt
 ein Gewinn-/Verlust-Overlay mit „Noch eine Runde?“ sichtbar, bis die nächste
 Runde beginnt. Alternativ lässt sich dort zum Startbildschirm zurückkehren.
+Das Overlay erscheint erst nach dem letzten Zug samt Lamawechsel und Effekten.
+Eine ICQ-Bühne zeigt die Sieger-Lamas jubelnd und hüpfend, die unterlegenen
+Lamas mit gesenktem Kopf und Seufzerbewegung. Teamfarben bleiben für beide
+Spieler gleich. Der Animationsschalter und reduzierte Bewegung gelten auch hier.
 
 Bildquellen, Gameplay-Videos, Extraktion und Zuordnung der Medien:
 [RETRO-QUELLEN.md](RETRO-QUELLEN.md).

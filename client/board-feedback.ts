@@ -5,6 +5,9 @@ import { FEEDBACK_TIMING } from '../shared/feedback';
 /** A bounded overlay keeps transient fragments and score labels out of the game grid. */
 export class BoardFeedback {
   private animations = new Set<Animation>();
+  async settle() {
+    await Promise.all([...this.animations].map(animation => animation.finished.catch(() => {})));
+  }
   constructor(private scene: HTMLElement, private layer: HTMLElement, private enabled: () => boolean) {}
   clear() {
     for (const animation of this.animations) animation.cancel();
