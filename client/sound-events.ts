@@ -1,5 +1,5 @@
 import { cloneBoard, findMatches, lamaCounts, push, type Board, type Game, type Seat, type Tile } from '../shared/game';
-import { FEEDBACK_TIMING, boardMotionMs, crushMotionMs } from '../shared/feedback';
+import { FEEDBACK_TIMING, boardMotionMs, crushMotionMs, sideEjectImpactMs } from '../shared/feedback';
 export { FEEDBACK_TIMING } from '../shared/feedback';
 import type { STONE_SOUNDS } from './audio-catalog';
 
@@ -22,7 +22,9 @@ export function turnSounds(last: NonNullable<Game['lastMove']>, before: [number,
     const full = side === 'top' ? previous.every(row => row[lane] !== null) : previous[lane].every(cell => cell !== null);
     if (full) {
       if (side === 'top') cues.push({ kind: 'stone', action: 'squeeze', delay: 0 });
-      cues.push({ kind: 'stone', action: 'burst', delay: at(side === 'top' ? FEEDBACK_TIMING.crack : FEEDBACK_TIMING.insert) });
+      const impact = sideEjectImpactMs(previous, last.move);
+      cues.push({ kind: 'stone', action: 'burst', delay: at(side === 'top' ? FEEDBACK_TIMING.crack : impact) });
+      if (impact) cues.push({ kind: 'stone', action: 'drop', delay: at(impact) });
     }
     if (side === 'top' || hasFallingStones(push(previous, last.tile, last.move))) cues.push({ kind: 'stone', action: 'drop', delay: at(lead + FEEDBACK_TIMING.insert + (side === 'top' && full ? 0 : FEEDBACK_TIMING.gravity)) });
   }

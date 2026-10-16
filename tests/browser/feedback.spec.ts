@@ -31,7 +31,7 @@ test('Resolved hits emit symbol sounds, stone fragments and exact points; follow
   await a.goto('/'); await a.locator('#theme-toggle').click(); await a.locator('#name').fill('Alex'); await a.locator('#create').click();
   await expect(a.locator('#room-code')).toHaveText(/^[A-F0-9]{8}$/);
   await b.goto(await a.locator('#invite-link').inputValue());
-  if (await b.locator('#sound').getAttribute('aria-pressed') !== 'true') await b.locator('#sound').click();
+  if (await b.locator('#music').getAttribute('aria-pressed') !== 'true') await b.locator('#music').click();
   await b.locator('#theme-toggle').click();
   await b.locator('#name').fill('Sam'); await b.getByRole('button', { name: 'Raum beitreten' }).click();
   let transferred = false, points = 0, captured = false;
@@ -41,7 +41,7 @@ test('Resolved hits emit symbol sounds, stone fragments and exact points; follow
     const view = await page.evaluate(tiles => {
       const board: (Tile | null)[][] = Array.from({ length: 5 }, () => Array(5).fill(null));
       document.querySelectorAll<HTMLElement>('#board-controls>.tile').forEach(el => { board[Number(el.dataset.row)][Number(el.dataset.col)] = tiles.find(tile => el.classList.contains(tile)) ?? null; });
-      const symbols: Record<string, Tile> = { cherry: 'cherry', banana: 'lemon', plum: 'grape', pear: 'melon', bell: 'bell', seven: 'seven' };
+      const symbols: Record<string, Tile> = { cherry: 'cherry', banana: 'lemon', plum: 'grape', pear: 'melon', bell: 'bell', seven: 'seven', bar: 'bar' };
       const queue = [...document.querySelectorAll<HTMLImageElement>('#current-tile img,#next-tiles img')].map(img => symbols[img.src.split('/').at(-1)!.replace('.png', '')]);
       const scores = [0, 1].map(seat => Number(document.querySelector(`#player-${seat} .score`)!.firstChild!.textContent)) as [number, number];
       return { board, queue, scores };
@@ -67,7 +67,7 @@ test('Resolved hits emit symbol sounds, stone fragments and exact points; follow
       await a.screenshot({ path: 'test-results/stone-hit-modern.png', fullPage: true });
       await b.screenshot({ path: 'test-results/stone-hit-retro.png', fullPage: true }); captured = true;
     }
-    transferred = (await a.locator('#lamas-0').textContent()) !== '5';
+    transferred = await a.locator('#herd-llamas [data-team="0"]').count() !== 5;
   }
   expect(transferred).toBe(true);
   await expect.poll(async () => a.evaluate(() => (window as any).observedFeedback.sounds.filter((src: string) => /transhappy|transpissed/.test(src)).length)).toBeGreaterThan(0);
@@ -82,7 +82,7 @@ test('Resolved hits emit symbol sounds, stone fragments and exact points; follow
   await a.locator('#motion-toggle').click(); await expect(a.locator('.stone-fragment,.score-popup,.is-crossing')).toHaveCount(0);
   expect(await a.locator('#herd-llamas').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length)).toBe(0);
   expect(await a.locator('.board-scene').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length)).toBe(0);
-  await a.locator('#voices-toggle').click(); await expect(a.locator('#voices-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await a.locator('#sfx-toggle').click(); await expect(a.locator('#sfx-toggle')).toHaveAttribute('aria-pressed', 'false');
   expect(errors).toEqual([]); await context.close();
 });
 
@@ -98,7 +98,7 @@ test('Herd blinks like the RPS figures and stops every idle motion when disabled
     };
   });
   await page.goto('/'); await expect(page.locator('#herd-llamas>.mini-llama')).toHaveCount(10);
-  await page.clock.fastForward(2200);
+  await page.clock.fastForward(2400);
   const calls = await page.evaluate(() => (window as any).herdAnimationCalls);
   expect(calls.some((call: any) => call.class === 'llama-eyes' && call.duration === 160)).toBe(true);
   expect(calls.some((call: any) => call.class === 'retro-eyelid' && call.duration === 160)).toBe(true);
@@ -111,11 +111,14 @@ test('Herd blinks like the RPS figures and stops every idle motion when disabled
 
 test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone crush', async ({ page }) => {
   await page.addInitScript(() => {
-    const times = { sliding: 0, drops: [] as number[] };
+    const times = { sliding: 0, drops: [] as number[], burstingRow: '' };
     Object.assign(window, { mechanicalSounds: [], mechanicalTimes: times });
     document.addEventListener('DOMContentLoaded', () => {
       const scene = document.querySelector<HTMLElement>('.board-scene')!;
-      new MutationObserver(() => { if (scene.dataset.motionPhase === 'sliding') times.sliding = performance.now(); })
+      new MutationObserver(() => {
+        if (scene.dataset.motionPhase === 'sliding') times.sliding = performance.now();
+        if (scene.dataset.motionPhase === 'bursting') times.burstingRow = scene.querySelector<HTMLImageElement>('[data-row="1"][data-col="0"] img')!.getAttribute('src')!;
+      })
         .observe(scene, { attributes: true, attributeFilter: ['data-motion-phase'] });
     });
     HTMLMediaElement.prototype.play = function () {
@@ -125,7 +128,7 @@ test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone
     };
   });
   await page.goto('/');
-  for (const id of ['theme-toggle', 'voices-toggle', 'sound', 'motion-toggle']) {
+  for (const id of ['theme-toggle', 'sfx-toggle', 'music', 'motion-toggle']) {
     const button = page.locator('#' + id);
     if (await button.getAttribute('aria-pressed') !== 'true') await button.click();
     await expect(button).toHaveCSS('color', 'rgb(36, 82, 11)');
@@ -155,12 +158,13 @@ test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone
   await expect(page.locator('.board-scene')).toHaveAttribute('data-motion-phase', 'cracking');
   await expect(page.locator('.stone-cracks')).toHaveCount(1);
   await expect(page.locator('#board-controls [data-row="1"][data-col="0"] img')).toHaveAttribute('src', rowBefore!);
-  await expect.poll(() => page.locator('#queue-wheel').evaluate(el => el.getAnimations().some(animation => animation.playState === 'running'))).toBe(true);
-  expect(await page.locator('#queue-wheel').evaluate(el => (el.getAnimations()[0].effect as KeyframeEffect).getKeyframes()[0].rotate)).toBe('45deg');
+  const plate = page.locator('#queue-wheel .wheel-plate');
+  await expect.poll(() => plate.evaluate(el => el.getAnimations().some(animation => animation.playState === 'running'))).toBe(true);
+  expect(await plate.evaluate(el => (el.getAnimations()[0].effect as KeyframeEffect).getKeyframes().map(frame => frame.rotate))).toEqual(['0deg', '-32deg']);
+  expect(await plate.evaluate(el => el.getAnimations()[0].effect!.getTiming().delay)).toBe(1320);
   await page.screenshot({ path: 'test-results/stone-cracking.png', fullPage: true });
-  await expect(page.locator('.board-scene')).toHaveAttribute('data-motion-phase', 'bursting');
-  await expect(page.locator('#board-controls [data-row="1"][data-col="0"] img')).toHaveAttribute('src', rowBefore!);
-  await expect(page.locator('.board-scene')).toHaveAttribute('data-motion-phase', 'sliding');
+  await expect.poll(() => page.evaluate(() => (window as any).mechanicalTimes.burstingRow)).toBe(rowBefore!);
+  await expect.poll(() => page.evaluate(() => (window as any).mechanicalTimes.sliding)).toBeGreaterThan(0);
   await expect(page.locator('#current-tile img')).toHaveAttribute('src', next!);
   await expect.poll(() => page.evaluate(() => (window as any).mechanicalSounds.some((src: string) => src.endsWith('stone-burst.mp3')))).toBe(true);
   await expect(page.locator('.ejected-stone')).toHaveCount(0);
@@ -168,6 +172,8 @@ test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone
   const times = await page.evaluate(() => (window as any).mechanicalTimes);
   expect(times.sliding).toBeGreaterThan(0);
   expect(times.drops[0] - times.sliding).toBeGreaterThanOrEqual(300);
+  await expect(plate).toHaveCSS('rotate', '-32deg');
+  await expect(page.locator('#queue-wheel')).toHaveCSS('rotate', 'none');
   await page.screenshot({ path: 'test-results/stone-wheel-retro.png', fullPage: true });
   await page.locator('#theme-toggle').click();
   await page.screenshot({ path: 'test-results/stone-wheel-modern.png', fullPage: true });

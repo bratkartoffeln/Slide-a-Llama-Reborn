@@ -2,7 +2,7 @@ import './style.css';
 import './retro.css';
 import './feedback.css';
 import { fruit, llama, arrow } from './art';
-import { GameAudio } from './sound';
+import { GameAudio, GameMusic } from './sound';
 import { FEEDBACK_TIMING } from './sound-events';
 import { crushesBottom } from '../shared/feedback';
 import { BoardFeedback } from './board-feedback';
@@ -21,16 +21,16 @@ let status: ConnectionStatus = 'idle';
 let clockOffset = 0, renderedRevision = -1, animationGeneration = 0, animating = false, movePending = false;
 let pendingMoveTimer: ReturnType<typeof setTimeout>;
 let resultRevealPending = false;
-let sound = storage.get('lama:sound') !== 'off';
+let sound = (storage.get('lama:sfx') ?? storage.get('lama:sound')) !== 'off';
 const audio = new GameAudio(); audio.setEnabled(sound);
-let voices = storage.get('lama:voices') !== 'off'; audio.setVoicesEnabled(voices);
+const music = new GameMusic(); let musicEnabled = storage.get('lama:music') !== 'off'; music.setEnabled(musicEnabled);
 let retro = storage.get('lama:theme') !== 'modern';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let motionPreference = storage.get('lama:motion') !== 'off';
 const motionEnabled = () => motionPreference && !reducedMotion.matches;
 const activeAnimations = new Set<Animation>();
 document.body.dataset.theme = retro ? 'retro' : 'modern';
-const tileName = (tile: Tile) => retro ? ({ cherry: 'Kirsche', lemon: 'Banane', grape: 'Pflaume', melon: 'Birne', bell: 'Glocke', seven: 'Sieben' })[tile] : TILE_INFO[tile].name;
+const tileName = (tile: Tile) => retro ? ({ cherry: 'Kirsche', lemon: 'Banane', grape: 'Pflaume', melon: 'Birne', bell: 'Glocke', seven: 'Sieben', bar: 'BAR' })[tile] : TILE_INFO[tile].name;
 let chatMessages: ChatMessage[] = [], unread = 0;
 let chatInitialized = false;
 const chatDrafts = new Map<string, string>();
@@ -38,7 +38,7 @@ const demo = newGame(() => 0.25);
 demo.board = [['cherry','melon','lemon','grape','seven'],['grape','cherry','lemon','bell','melon'],['lemon','grape','melon','cherry','bell'],['melon','bell','cherry','grape','lemon'],['cherry','lemon','grape','melon','cherry']];
 const app = $('app');
 app.innerHTML = `
-<div class="retro-titlebar" aria-hidden="true"><span class="retro-flower"><img src="/retro/flower.svg" alt=""/></span><span>Slide-a-Llama · ICQ Games</span><span class="retro-window-buttons">─ ▢ ×</span></div><header class="site-header"><a class="brand" href="/" aria-label="Slide-a-Llama Startseite"><img class="modern-brand" src="/favicon.svg" alt=""/><img class="retro-brand" src="/retro/flower.svg" alt=""/><span>slide<span class="brand-dash">-a-</span>llama<small>REBORN · DAS DUELL IST ZURÜCK</small></span></a><nav><button class="theme-toggle" id="theme-toggle" aria-pressed="false">ICQ-Retro</button><button class="theme-toggle voices-toggle" id="voices-toggle" aria-label="Lama-Stimmen" aria-pressed="true">Stimmen</button><button class="icon-button motion-toggle" id="motion-toggle" aria-label="Animationen ausschalten" title="Animationen ausschalten" aria-pressed="true">✦</button><span class="connection"><i id="connection-dot"></i><span id="connection-label">Bereit für ein Duell</span></span><button class="icon-button" id="sound" aria-label="Ton einschalten" title="Ton einschalten">♪</button><button class="text-button" id="rules-open">So geht’s <span>↗</span></button></nav></header>
+<div class="retro-titlebar" aria-hidden="true"><span class="retro-flower"><img src="/retro/flower.svg" alt=""/></span><span>Slide-a-Llama · ICQ Games</span><span class="retro-window-buttons">─ ▢ ×</span></div><header class="site-header"><a class="brand" href="/" aria-label="Slide-a-Llama Startseite"><img class="modern-brand" src="/favicon.svg" alt=""/><img class="retro-brand" src="/retro/flower.svg" alt=""/><span>slide<span class="brand-dash">-a-</span>llama<small>REBORN · DAS DUELL IST ZURÜCK</small></span></a><nav><span class="connection"><i id="connection-dot"></i><span id="connection-label">Bereit für ein Duell</span></span><button class="theme-toggle" id="theme-toggle" aria-pressed="false">ICQ-Retro</button><button class="theme-toggle sfx-toggle" id="sfx-toggle" aria-label="Soundeffekte" aria-pressed="true">SFX</button><button class="icon-button motion-toggle" id="motion-toggle" aria-label="Animationen ausschalten" title="Animationen ausschalten" aria-pressed="true">✦</button><button class="icon-button" id="music" aria-label="Hintergrundmusik ausschalten" title="Hintergrundmusik ausschalten">♪</button><button class="text-button" id="rules-open">So geht’s <span>↗</span></button></nav></header>
 <main>
   <section class="intro"><div><p class="eyebrow"><span></span> DER KLASSIKER. WIEDER ZUSAMMEN.</p><h1>Kleine Steine.<br/><em>Große Rivalität.</em></h1><p class="intro-copy">Schiebe Früchte, entdecke Ketten und gewinne die Lamas.<br class="desktop-only"/> Ein Freund. Ein Spielfeld. Noch eine Runde.</p></div><div class="intro-art"><span class="art-sun"></span>${llama('#f3e8d0','#d57850','hero-llama')}<span class="art-caption">ALTE LIEBE.<br/>NEUES DUELL.</span><span class="art-spark">✳</span></div></section>
   <div class="play-heading"><div><span class="live-dot"></span><h2 id="table-heading">Dein Spieltisch</h2><span class="mode-badge" id="mode-badge">FRÜCHTE · 1 GEGEN 1</span></div><button class="text-button" id="leave" hidden>Raum verlassen ↗</button></div>
@@ -51,10 +51,10 @@ app.innerHTML = `
     <section class="arena" id="arena" aria-label="Spielfeld">
       <div id="reconnecting" class="reconnect-banner" role="status" hidden>Verbindung unterbrochen. Dein Platz bleibt reserviert; wir verbinden dich erneut …</div>
       <div class="retro-game-caption" aria-hidden="true">SLIDE-A-LLAMA <small>CLASSIC FRUITS</small></div><div class="player-row"><div class="player player-zero" id="player-0"></div><div class="versus">VS</div><div class="player player-one" id="player-1"></div></div>
-      <div class="turn-line"><span id="turn-label">Ein kleines Duell wartet auf dich.</span><span class="timer" id="timer">30<span>s</span></span></div><div class="timer-track"><span id="timer-fill"></span></div>
-      <div class="temple-stage"><div class="board-scene"><img class="retro-temple" src="/retro/temple.png" alt="" draggable="false"/><div class="temple-top"><span>◆</span><i></i><span>◆</span></div><div class="board-controls" id="board-controls"></div><div class="board-effects" id="board-effects" aria-hidden="true"></div><div class="board-overlay" id="board-overlay"><span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere Paco heraus.</p></div></div>
+      <div class="turn-line"><span id="turn-label">Ein kleines Duell wartet auf dich.</span></div>
+      <div class="temple-stage"><div class="board-scene"><img class="retro-temple" src="/retro/temple.png" alt="" draggable="false"/><div class="temple-top"><span>◆</span><i></i><span>◆</span></div><div class="board-controls" id="board-controls"></div><div class="board-effects" id="board-effects" aria-hidden="true"></div><div class="temple-foreground" aria-hidden="true"><img class="temple-pillar-left" src="/retro/temple.png" alt=""/><img class="temple-pillar-right" src="/retro/temple.png" alt=""/></div><div id="insertion-preview" class="insertion-preview" aria-hidden="true" hidden></div><div class="board-overlay" id="board-overlay"><span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere Paco heraus.</p></div></div>
       <div class="tile-queue"><div class="wheel-window"><div class="queue-wheel" id="queue-wheel" role="group" aria-label="Stein-Drehrad, der kommende Stein steht links unten, danach aufwärts"><div class="wheel-plate" aria-hidden="true"><i></i><b>&#9670;</b></div><div class="current-tile"><span>JETZT</span><div id="current-tile"></div></div><div class="next-tiles"><span>DANACH</span><div id="next-tiles"></div></div></div></div><div class="queue-hint" id="queue-hint">Einsetzen.<br/><strong>Überraschen.</strong></div></div>
-      <div class="herd"><div class="herd-top"><span>DEINE LAMAS <b id="lamas-0">5</b></span><span><b id="lamas-1">5</b> GEGENSEITE</span></div><div id="herd-llamas" class="herd-llamas"></div><div class="lead-track"><span id="lead-fill"></span><i></i></div><p id="herd-caption">60 Punkte Vorsprung = ein Lama für dich.</p></div>
+      <div class="herd"><div id="herd-llamas" class="herd-llamas"></div><div class="turn-counter" id="turn-counter" data-team="0" role="timer" aria-live="off"><span class="turn-counter-left" aria-hidden="true">${arrow('left')}</span><b id="timer">30</b><span class="turn-counter-right" aria-hidden="true">${arrow('right')}</span></div><p id="herd-caption">60 Punkte Vorsprung = ein Lama für dich.</p></div>
       </div><div class="move-feedback" id="move-feedback" aria-live="polite">Drei gleiche Früchte. Ein ziemlich guter Anfang.</div>
       <div id="result" class="result" role="dialog" aria-modal="true" aria-labelledby="result-heading" hidden></div>
       <button id="resign" class="text-button resign" hidden>Partie aufgeben</button>
@@ -65,15 +65,18 @@ app.innerHTML = `
 </main>
 <footer><span>Ein bisschen früher. Ein bisschen besser.</span><span>SLIDE-A-LLAMA REBORN <b>v${__APP_VERSION__}</b></span></footer>
 <div id="toast" class="toast" role="status" hidden></div>
-<dialog id="rules"><button class="dialog-close" id="rules-close" aria-label="Schließen">×</button><p class="eyebrow">KURZ ERKLÄRT</p><h2>Schieben. Kombinieren.<br/><em>Lamas gewinnen.</em></h2><p>Ihr spielt abwechselnd auf demselben 5×5-Feld. Setze den aktuellen Stein mit einem der Pfeile von <b>oben, links oder rechts</b> ein. Nur Steine mit direktem Kontakt werden mitgeschoben. An der ersten Lücke endet die Schiebekette; Steine dahinter bleiben stehen. Ist der Streifen lückenlos voll, fällt der letzte Stein hinaus. Anschließend wirkt die Schwerkraft.</p><p>Mindestens drei gleiche Symbole in einer waagerechten oder senkrechten Reihe verschwinden. Vier zählen doppelt, fünf dreifach. Entsteht danach eine weitere Reihe, zählen ihre Punkte mit dem nächsten Kaskadenfaktor (×2, ×3, …). Leere Felder werden mit euren nächsten Zügen gefüllt.</p><p>Ihr startet mit je fünf Lamas. Je <b>60 Punkte Vorsprung</b> wechselt eines die Seite. Mit <b>300 Punkten Vorsprung</b> gewinnst du alle zehn und die Partie.</p><p>Nach Ablauf der Zugzeit wird dein Stein automatisch oben links eingesetzt. Bei Verbindungsabbruch pausiert die Partie für bis zu <b>120 Sekunden</b>. Danach gewinnt der verbliebene Spieler.</p><div class="keyboard-tip">Tastatur: <kbd>1</kbd>–<kbd>5</kbd> von oben · <kbd>Shift</kbd> + Zahl von links · <kbd>Alt</kbd> + Zahl von rechts</div><p class="small-note">Eigenständiger Früchte-Nachbau, inspiriert vom ICQ-Klassiker. Symbolhäufigkeiten und Punktewerte sind die Abstimmung dieser Version.</p><button class="button primary" id="rules-play">Alles klar, los geht’s</button></dialog>
+<dialog id="rules"><button class="dialog-close" id="rules-close" aria-label="Schließen">×</button><p class="eyebrow">KURZ ERKLÄRT</p><h2>Schieben. Kombinieren.<br/><em>Lamas gewinnen.</em></h2><p>Ihr spielt abwechselnd auf demselben 5×5-Feld. Setze den aktuellen Stein an einer Randposition von <b>oben, links oder rechts</b> ein. Nur Steine mit direktem Kontakt werden mitgeschoben. An der ersten Lücke endet die Schiebekette; Steine dahinter bleiben stehen. Ist der Streifen lückenlos voll, fällt der letzte Stein hinaus. Anschließend wirkt die Schwerkraft.</p><p>Mindestens drei gleiche Symbole in einer waagerechten oder senkrechten Reihe verschwinden. Vier zählen doppelt, fünf dreifach. Entsteht danach eine weitere Reihe, zählen ihre Punkte mit dem nächsten Kaskadenfaktor (×2, ×3, …). Leere Felder werden mit euren nächsten Zügen gefüllt.</p><p>Ihr startet mit je fünf Lamas. Je <b>60 Punkte Vorsprung</b> wechselt eines die Seite. Mit <b>300 Punkten Vorsprung</b> gewinnst du alle zehn und die Partie.</p><p>Nach Ablauf der Zugzeit wird dein Stein automatisch oben links eingesetzt. Bei Verbindungsabbruch pausiert die Partie für bis zu <b>120 Sekunden</b>. Danach gewinnt der verbliebene Spieler.</p><div class="keyboard-tip">Tastatur: <kbd>1</kbd>–<kbd>5</kbd> von oben · <kbd>Shift</kbd> + Zahl von links · <kbd>Alt</kbd> + Zahl von rechts</div><p class="small-note">Eigenständiger Früchte-Nachbau, inspiriert vom ICQ-Klassiker. Symbolhäufigkeiten und Punktewerte sind die Abstimmung dieser Version.</p><button class="button primary" id="rules-play">Alles klar, los geht’s</button></dialog>
 <dialog id="confirm"><h2 id="confirm-title">Partie verlassen?</h2><p id="confirm-copy"></p><div class="confirm-buttons"><button class="button secondary" id="confirm-no">Weiterspielen</button><button class="button primary" id="confirm-yes">Bestätigen</button></div></dialog>`;
 
 function notify(message: string) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 6500); }
 let toastTimer: ReturnType<typeof setTimeout>;
 const boardFeedback = new BoardFeedback($('board-controls').parentElement!, $('board-effects'), motionEnabled);
 const herdMotion = new HerdMotion($('herd-llamas'), () => motionEnabled() && (state?.phase !== 'finished' || animating));
-function updateSound() { $('sound').classList.toggle('enabled', sound); $('sound').setAttribute('aria-label', sound ? 'Ton ausschalten' : 'Ton einschalten'); $('sound').title = sound ? 'Ton ausschalten' : 'Ton einschalten'; $('sound').setAttribute('aria-pressed', String(sound)); }
-$('sound').onclick = () => { sound = !sound; storage.set('lama:sound', sound ? 'on' : 'off'); audio.setEnabled(sound); updateSound(); }; updateSound();
+function updateSfx() { $('sfx-toggle').setAttribute('aria-label', sound ? 'Soundeffekte ausschalten' : 'Soundeffekte einschalten'); $('sfx-toggle').title = sound ? 'Soundeffekte ausschalten' : 'Soundeffekte einschalten'; $('sfx-toggle').setAttribute('aria-pressed', String(sound)); }
+function updateMusic() { $('music').setAttribute('aria-label', musicEnabled ? 'Hintergrundmusik ausschalten' : 'Hintergrundmusik einschalten'); $('music').title = musicEnabled ? 'Hintergrundmusik ausschalten' : 'Hintergrundmusik einschalten'; $('music').setAttribute('aria-pressed', String(musicEnabled)); }
+$('music').onclick = () => { musicEnabled = !musicEnabled; storage.set('lama:music', musicEnabled ? 'on' : 'off'); music.setEnabled(musicEnabled); updateMusic(); }; updateMusic();
+document.addEventListener('pointerdown', () => music.refresh());
+document.addEventListener('keydown', () => music.refresh());
 function applyPreferences() {
   document.body.dataset.theme = retro ? 'retro' : 'modern';
   document.body.classList.toggle('motion-off', !motionEnabled());
@@ -83,18 +86,18 @@ function applyPreferences() {
   const label = reducedMotion.matches ? 'Animationen durch Systemeinstellung reduziert' : motionEnabled() ? 'Animationen ausschalten' : 'Animationen einschalten';
   $('motion-toggle').setAttribute('aria-label', label); $('motion-toggle').title = label;
   $<HTMLButtonElement>('motion-toggle').disabled = reducedMotion.matches;
-  $('voices-toggle').setAttribute('aria-pressed', String(voices));
-  $('voices-toggle').title = voices ? 'Lama-Stimmen ausschalten' : 'Lama-Stimmen einschalten';
+  updateSfx();
   herdMotion.refresh();
 }
 function cancelVisuals() {
+  hideInsertionPreview();
   animationGeneration++; animating = false;
   for (const animation of activeAnimations) animation.cancel();
   activeAnimations.clear();
   boardFeedback.clear(); herdMotion.clear();
 }
-$('voices-toggle').onclick = () => { voices = !voices; storage.set('lama:voices', voices ? 'on' : 'off'); audio.setVoicesEnabled(voices); applyPreferences(); };
-document.addEventListener('visibilitychange', () => { if (document.hidden) { audio.cancel(); herdMotion.clear(); } else herdMotion.refresh(); });
+$('sfx-toggle').onclick = () => { sound = !sound; storage.set('lama:sfx', sound ? 'on' : 'off'); audio.setEnabled(sound); updateSfx(); };
+document.addEventListener('visibilitychange', () => { music.refresh(); if (document.hidden) { audio.cancel(); herdMotion.clear(); } else herdMotion.refresh(); });
 $('theme-toggle').onclick = () => {
   retro = !retro; storage.set('lama:theme', retro ? 'retro' : 'modern'); cancelVisuals(); applyPreferences();
   renderBoard(state?.game.board ?? demo.board); renderQueue(); renderPlayers(); renderHerd(); renderStatus(); renderChat();
@@ -131,6 +134,7 @@ function create(bot: boolean) { const n = name(); if (n) connection.connect({ ty
 $('create').onclick = () => create(false); $('practice').onclick = () => create(true);
 $('join-form').onsubmit = event => { event.preventDefault(); const n = name(); if (!n) return; const room = roomCode($<HTMLInputElement>('room-input').value); if (!room) { notify('Gib den achtstelligen Raumcode oder den vollständigen Einladungslink ein.'); return; } connection.connect({ type: 'join', room, name: n }); };
 function reset() {
+  music.setPlaying(false);
   resultRevealPending = false;
   document.body.classList.remove('in-room');
   cancelVisuals(); audio.cancel();
@@ -158,7 +162,7 @@ function receive(message: ServerMessage) {
     if (previous && state.phase === 'finished' && previous.phase !== 'finished') resultRevealPending = true;
     if (state.phase !== 'finished') resultRevealPending = false;
     if (moved && motionEnabled()) animating = true;
-    renderPlayers(); renderQueue(!!moved);
+    renderPlayers(); renderQueue(!!moved, previous?.game.board);
     if (!moved && !animating) renderHerd();
     $('round').textContent = String(state.round); $('wins').textContent = state.wins.join(' : ');
     $('mode-badge').textContent = state.players[1]?.bot ? 'TRAINING MIT PACO' : `RAUM ${state.room}`;
@@ -201,7 +205,30 @@ function renderPlayers() {
     $(`player-${seat}`).classList.toggle('active', !!state && state.game.turn === seat && state.phase === 'playing');
   }
 }
+let activeInsertion: string | undefined;
+function hideInsertionPreview() { activeInsertion = undefined; $('insertion-preview').hidden = true; }
+function updateInsertionPreview() {
+  const preview = $('insertion-preview');
+  const button = activeInsertion ? $('board-controls').querySelector<HTMLButtonElement>(`[data-move="${activeInsertion}"]`) : null;
+  if (!button || button.disabled || !canMove() || matchMedia('(max-width:680px), (hover:none), (pointer:coarse)').matches) { preview.hidden = true; return; }
+  const bounds = preview.parentElement!.getBoundingClientRect(), target = button.getBoundingClientRect();
+  const cell = $('board-controls').querySelector<HTMLElement>(':scope>.tile')!.getBoundingClientRect();
+  const size = cell.width;
+  preview.dataset.side = activeInsertion!.split(':')[0];
+  Object.assign(preview.style, { left: target.left + target.width / 2 - bounds.left - size / 2 + 'px', top: target.top + target.height / 2 - bounds.top - size / 2 + 'px', width: size + 'px', height: size + 'px' });
+  const tile = state!.game.queue[0];
+  if (preview.dataset.tile !== tile) { preview.dataset.tile = tile; preview.innerHTML = `<span class="tile stone-0">${fruit(tile)}</span>`; }
+  preview.hidden = false;
+}
+window.addEventListener('resize', () => updateInsertionPreview());
+function scheduleLamaIdle() {
+  setTimeout(() => {
+    if (state?.phase === 'playing' && status === 'connected' && !animating && !movePending && audio.playIdleLama()) herdMotion.react();
+    scheduleLamaIdle();
+  }, 20000 + Math.random() * 25000);
+}
 function renderBoard(board: Board, matches: [number, number][] = []) {
+  hideInsertionPreview();
   const focus = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.move : undefined;
   let html = '';
   for (let c = 0; c < 5; c++) html += moveButton('top', c, 1, c + 2);
@@ -219,6 +246,7 @@ function renderBoard(board: Board, matches: [number, number][] = []) {
     const highlight = (on: boolean) => {
       if (on) $('board-controls').querySelectorAll('.active-arrow').forEach(other => other.classList.remove('active-arrow'));
       b.classList.toggle('active-arrow', on);
+      activeInsertion = on ? b.dataset.move : undefined; updateInsertionPreview();
       const [side, lane] = b.dataset.move!.split(':');
       $('board-controls').querySelectorAll<HTMLElement>('.tile').forEach(cell => cell.classList.toggle('preview', on && !b.disabled && (side === 'top' ? cell.dataset.col : cell.dataset.row) === lane));
     };
@@ -252,6 +280,7 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
   const pushed = push(previous, last.tile, last.move);
   const scene = $('board-controls').parentElement!;
   const crush = crushesBottom(previous, last.move);
+  let ejection: Promise<void> | undefined;
   if (crush) {
     renderBoard(previous); scene.dataset.motionPhase = 'cracking';
     boardFeedback.crackBottom(previous, last.move.lane, last.tile);
@@ -263,7 +292,7 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
     await new Promise(r => setTimeout(r, FEEDBACK_TIMING.crush));
     if (generation !== animationGeneration) return;
     boardFeedback.releaseWaitingStone();
-  } else if (last.move.side !== 'top') boardFeedback.eject(previous, last.move);
+  } else if (last.move.side !== 'top') ejection = boardFeedback.eject(previous, last.move);
   const directFall = last.move.side === 'top' && !crush;
   scene.dataset.motionPhase = 'sliding';
   renderBoard(directFall ? insert(previous, last.tile, last.move) : pushed);
@@ -315,6 +344,8 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
     }
   }
   if (generation !== animationGeneration) return;
+  await ejection;
+  if (generation !== animationGeneration) return;
   renderBoard(snapshot.game.board); renderHerd(lamaCounts([snapshot.game.scores[0] - (last.seat === 0 ? last.points : 0), snapshot.game.scores[1] - (last.seat === 1 ? last.points : 0)]));
   // Keep the next player from interrupting a follower's actual walk.
   if ($('herd-llamas').querySelector('.is-crossing')) await new Promise(r => setTimeout(r, FEEDBACK_TIMING.transfer));
@@ -341,28 +372,70 @@ function updateControls() {
   $('arena')?.classList.toggle('my-turn', canMove());
   if ($('rematch')) $<HTMLButtonElement>('rematch').disabled = status !== 'connected' || !!state?.players[state.you]?.rematch;
   $<HTMLButtonElement>('resign').disabled = status !== 'connected';
+  updateInsertionPreview();
 }
-function renderQueue(advance = false) {
+let renderedQueueKey = '', queueWheelAngle = 0;
+function renderQueue(advance = false, previousBoard?: Board) {
   const queue = state?.game.queue ?? demo.queue;
+  const key = queue.join(':');
+  if (!advance && renderedQueueKey === key) return;
+  renderedQueueKey = key;
+  const wheel = $('queue-wheel'), plate = wheel.querySelector<HTMLElement>('.wheel-plate')!;
+  const oldSlots = [...wheel.querySelectorAll<HTMLElement>('#current-tile,#next-tiles>div')].map(element => element.getBoundingClientRect());
+  const startAngle = parseFloat(getComputedStyle(plate).rotate) || 0;
+  wheel.getAnimations({ subtree: true }).forEach(animation => animation.cancel());
   $('current-tile').innerHTML = fruit(queue[0]); $('next-tiles').innerHTML = queue.slice(1).map(t => `<div title="${tileName(t)}">${fruit(t)}</div>`).join('');
   $('current-tile').setAttribute('aria-label', 'Aktueller Stein: ' + tileName(queue[0]));
   if (advance) {
-    animateElement($('queue-wheel'), [{ rotate: '45deg' }, { rotate: '0deg' }], 660);
-    $('queue-wheel').querySelectorAll('.tile-art').forEach(art => animateElement(art, [{ rotate: '-45deg' }, { rotate: '0deg' }], 660));
+    queueWheelAngle -= 32;
+    plate.style.rotate = queueWheelAngle + 'deg';
+    if (!motionEnabled()) return;
+    const last = state!.game.lastMove!;
+    const delay = FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity +
+      (crushesBottom(previousBoard, last.move) ? FEEDBACK_TIMING.crack + FEEDBACK_TIMING.crush : 0);
+    const animate = (element: HTMLElement, frames: Keyframe[]) => {
+      const animation = element.animate(frames, { duration: 660, delay, fill: 'backwards', easing: 'cubic-bezier(.45,0,.3,1)' });
+      activeAnimations.add(animation);
+      void animation.finished.catch(() => {}).finally(() => activeAnimations.delete(animation));
+    };
+    animate(plate, [{ rotate: startAngle + 'deg' }, { rotate: queueWheelAngle + 'deg' }]);
+    const bounds = wheel.getBoundingClientRect(), scale = bounds.width / wheel.offsetWidth;
+    const center = (rect: DOMRect) => ({ x: (rect.left + rect.width / 2 - bounds.left) / scale, y: (rect.top + rect.height / 2 - bounds.top) / scale });
+    const slots = [...wheel.querySelectorAll<HTMLElement>('#current-tile,#next-tiles>div')];
+    slots.forEach((element, index) => {
+      const target = element.getBoundingClientRect(), end = center(target);
+      const previous = oldSlots[index + 1];
+      const tail = center(oldSlots[oldSlots.length - 1]);
+      const entryAngle = Math.atan2(tail.y - 87, tail.x - 87) + 32 * Math.PI / 180;
+      const radius = Math.hypot(tail.x - 87, tail.y - 87);
+      const start = previous ? center(previous) : { x: 87 + Math.cos(entryAngle) * radius, y: 87 + Math.sin(entryAngle) * radius };
+      const fromAngle = Math.atan2(start.y - 87, start.x - 87);
+      let toAngle = Math.atan2(end.y - 87, end.x - 87);
+      while (toAngle > fromAngle) toAngle -= Math.PI * 2;
+      const fromRadius = Math.hypot(start.x - 87, start.y - 87), toRadius = Math.hypot(end.x - 87, end.y - 87);
+      const fromScale = previous ? previous.width / target.width : 1;
+      // Gondolas stay upright; only their centres travel around the wheel.
+      animate(element, Array.from({ length: 17 }, (_, step) => step / 16).map(progress => {
+        const angle = fromAngle + (toAngle - fromAngle) * progress, radius = fromRadius + (toRadius - fromRadius) * progress;
+        return { translate: `${87 + Math.cos(angle) * radius - end.x}px ${87 + Math.sin(angle) * radius - end.y}px`, rotate: '0deg', scale: fromScale + (1 - fromScale) * progress, opacity: previous ? 1 : Math.min(1, progress * 2), offset: progress };
+      }));
+    });
   }
 }
 function renderHerd(previous?: [number, number]) {
   const counts = lamaCounts(state?.game.scores ?? [0, 0]);
-  $('lamas-0').textContent = String(counts[0]); $('lamas-1').textContent = String(counts[1]);
   herdMotion.render(counts[0], !!previous && previous[0] !== counts[0]);
-  $('lead-fill').style.width = `${counts[0] * 10}%`;
+  renderTurnCounter();
   const diff = state ? state.game.scores[0] - state.game.scores[1] : 0;
   $('herd-caption').textContent = diff ? `${state!.players[diff > 0 ? 0 : 1]?.name ?? 'Spieler'} führt mit ${Math.abs(diff)} Punkten · Noch ${60 - Math.abs(diff) % 60} bis zum nächsten Lama.` : '60 Punkte Vorsprung = ein Lama für dich.';
-  const labels = $('herd-llamas').previousElementSibling!;
-  labels.querySelector('span')!.firstChild!.textContent = state ? `${state.you === 0 ? 'DEINE' : state.players[0]?.name.toUpperCase() ?? ''} LAMAS ` : 'DEINE LAMAS ';
-  labels.querySelector('span:last-child')!.lastChild!.textContent = state?.you === 1 ? ' DEINE LAMAS' : ' GEGENSEITE';
+}
+function renderTurnCounter() {
+  const team = state?.phase === 'finished' && !animating ? state.game.winner! : animating && state?.game.lastMove ? state.game.lastMove.seat : state?.game.turn ?? 0;
+  $('turn-counter').dataset.team = String(team);
 }
 function renderStatus() {
+  music.setPlaying(state?.phase === 'playing');
+  renderTurnCounter();
   if (!state || state.phase !== 'finished') { $('result').replaceChildren(); delete $('result').dataset.resultKey; }
   const overlay = $('board-overlay');
   overlay.hidden = !!state && state.phase !== 'waiting' && state.phase !== 'paused';
@@ -414,9 +487,11 @@ document.addEventListener('keydown', event => {
 function tick() {
   const total = state?.turnSeconds ?? 30;
   const remaining = state?.deadline ? Math.max(0, (state.deadline - Date.now() - clockOffset) / 1000) : total;
-  $('timer').innerHTML = state && state.phase !== 'playing' ? '—' : `${Math.ceil(Math.min(total, remaining))}<span>s</span>`;
+  const display = state && state.phase !== 'playing' ? '—' : String(Math.ceil(Math.min(total, remaining)));
+  if ($('timer').textContent !== display) $('timer').textContent = display;
   $('timer').classList.toggle('urgent', remaining <= 5);
-  $('timer-fill').style.width = `${Math.min(100, remaining / total * 100)}%`;
+  const team = Number($('turn-counter').dataset.team) as Seat;
+  $('turn-counter').setAttribute('aria-label', `${state?.players[team]?.name ?? 'Zugzeit'}: ${display === '—' ? 'Zugzeit pausiert' : display + ' Sekunden verbleibend'}`);
   updateControls();
 }
 setInterval(tick, 150);
@@ -447,6 +522,6 @@ document.addEventListener('keydown', event => {
   const digit = event.code.match(/^Digit([1-5])$/)?.[1];
   if (digit) { event.preventDefault(); makeMove({ side: event.shiftKey ? 'left' : event.altKey ? 'right' : 'top', lane: Number(digit) - 1 }); }
 });
-renderBoard(demo.board); renderPlayers(); renderQueue(); renderHerd(); renderStatus();
+renderBoard(demo.board); renderPlayers(); renderQueue(); renderHerd(); renderStatus(); scheduleLamaIdle();
 const invited = roomCode(location.href);
 if (invited) { $<HTMLInputElement>('room-input').value = invited; if (!connection.resume(invited)) { notify('Du bist eingeladen! Gib deinen Namen ein und tritt dem Raum bei.'); $<HTMLInputElement>('name').focus(); } }

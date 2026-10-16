@@ -1,8 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { newGame, push, insert, resolve, findMatches, play, lamaCounts, botMove, MOVES, type Board } from '../shared/game.js';
+import { newGame, push, insert, resolve, findMatches, play, lamaCounts, botMove, MOVES, randomTile, type Board } from '../shared/game.js';
 
 const empty = (): Board => Array.from({ length: 5 }, () => Array(5).fill(null));
+test('BAR is drawn, scores its original 100 points and supports length bonuses and transfers', () => {
+  assert.equal(randomTile(() => .999), 'bar');
+  for (const size of [3, 4, 5]) {
+    const board = empty(); for (let col = 0; col < size; col++) board[4][col] = 'bar';
+    const result = resolve(board); assert.equal(result.points, 100 * (size - 2));
+    assert.equal(result.board.flat().filter(Boolean).length, 0);
+  }
+  const game = newGame(); game.board = empty(); game.board[4][0] = game.board[4][1] = 'bar'; game.queue[0] = 'bar';
+  const next = play(game, 0, { side: 'left', lane: 4 });
+  assert.equal(next.scores[0], 100); assert.deepEqual(lamaCounts(next.scores), [6, 4]);
+});
 test('Initial boards are full and contain no automatic matches, even with a constant RNG', () => {
   for (let i = 0; i < 100; i++) {
     const game = newGame(i < 2 ? () => i * .99 : Math.random);

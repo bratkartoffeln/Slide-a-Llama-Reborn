@@ -1,6 +1,6 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.9** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.10** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
 Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
@@ -45,7 +45,7 @@ Bereitschaft und die gemeinsame Version aus `package.json`.
 - Tastatur: `1`–`5` von oben, `Shift` + Zahl von links, `Alt` + Zahl von rechts.
 - Gemeinsame Revanche mit wechselndem Startspieler und Siegstand.
 
-Die sechs Symbole zählen 10/20/30/40/50/60 Punkte pro Dreierreihe.
+Die sieben Symbole zählen 10/20/30/40/50/60/100 Punkte pro Dreierreihe (BAR: 100).
 Punktetabelle, Symbolhäufigkeiten und Zeitwahl sind eigene Abstimmungen dieser
 Version. Der Poker-Modus mancher Originalausgaben ist nicht enthalten.
 Grundlage und Quellen: [SPIELREGELN.md](SPIELREGELN.md).
@@ -71,26 +71,45 @@ Die Vorschau sitzt auf einem Drehrad, das rechts neben dem Tempel halb sichtbar 
 Der direkt einzuschiebende Stein steht links unten und ist größer als die folgenden
 Steine. Die drei Folgesteine verteilen sich gleichmäßig auf dem sichtbaren Bogen
 bis nach oben; beim Nachrücken dreht sich das Rad gegen den Uhrzeigersinn.
-Nur der gerade gewählte Einschubpfeil ist sichtbar; alle Touchflächen bleiben erhalten.
+Nach dem Einschub rücken die Folgesteine von ihren bisherigen Positionen nach;
+das Rad behält seinen Drehwinkel und springt zwischen den Zügen nicht zurück.
+Die Steine bleiben dabei wie Riesenrad-Gondeln aufrecht und bewegen nur ihre
+Position entlang der Kreisbahn.
+Am Desktop zeigt die gewählte Einschubposition den aktuellen Stein, der in
+Einschubrichtung schwingt. Auf Touch-Geräten bleiben die Pfeilbuttons sichtbar.
 Die Lamas wechseln tatsächlich ihre Plätze, wippen beim Laufen und blinzeln
 im Stand mit voneinander unabhängigen Ruhebewegungen. Im Retro-Layout stehen sie
-direkt am Tempelfuß; Zähler und Fortschrittsbalken folgen kompakt darunter.
+direkt am Tempelfuß. Der mittige Countdown darunter zeigt die verbleibende Zugzeit;
+ein Pfeil zeigt in der Teamfarbe zur Seite des aktiven Spielers. Die obere
+Zeitanzeige und ihr Balken entfallen.
+Die Lamas blinzeln unabhängig voneinander alle drei bis zehn Sekunden.
 Beim Zersplittern ersetzen die Bruchstücke sofort den ursprünglichen Stein.
+Die Tempelsäulen liegen vor den Spielsteinen. Seitlich herausgeschobene Steine
+kippen über die Kante, fallen zum Tempelfuß und zerplatzen erst beim Aufprall.
+Aufprallgeräusche und Freigabe des nächsten Zugs folgen derselben Zeitleiste.
 
 **✦** schaltet Einschub-, Bruch-, Punkte-, Fall-, Trefferketten-, Lamawechsel- und Sieganimationen
 an oder aus. Ausschalten beendet laufende Animationen sofort; der endgültige
 Spielstand erscheint direkt. Die Systemeinstellung für reduzierte Bewegung
-hat Vorrang. **♪** schaltet separat die Effekte ein. Retro, Sounds, Stimmen und
-Animationen sind beim ersten Start aktiv; gespeicherte Einstellungen gelten weiter.
+hat Vorrang. **SFX** schaltet alle Soundeffekte einschließlich Lama-Stimmen,
+Ruhe-Reaktionen und Chatton. **♪** schaltet ausschließlich die unveränderte
+Original-Hintergrundmusik als leise Schleife während aktiver Runden. Beide
+Ton-Einstellungen sind unabhängig und werden lokal gespeichert. Retro, SFX,
+Musik und Animationen sind beim ersten Start aktiv; die Musik startet nach
+einer Benutzerinteraktion und pausiert bei verstecktem Tab oder pausierter Runde.
 Aktive Schalter leuchten ICQ-grün.
-In beiden Layouts spielen 45 Originalvarianten aus sechs Symbolgruppen die
+In beiden Layouts spielen 49 Originalvarianten aus sieben Symbolgruppen die
 passenden Treffer, ergänzt um einen Ketteneffekt, zehn Lama-Stimmen und fünf
 Effekte für Steinbewegungen und Bruch. Lamawechsel spielen aus eigener Sicht
 `transhappy` bei Zugewinn und `transpissed` bei Verlust, auch bei mehreren Lamas.
+Gelegentliche Original-Lama-Laute mit kleinen Körperreaktionen ergänzen ruhige
+Spielphasen. Sie haben mindestens zehn Sekunden Abstand zum letzten Sound und
+machen Platz, sobald ein Zug oder eine Chatnachricht beginnt. SFX schaltet
+auch diese Laute ab.
 Neue fremde
 Chatnachrichten spielen den klassischen ICQ-„Uh-oh“-Ton.
-**Stimmen** schaltet die positiven bzw. verärgerten Reaktionen bei eigenen
-Lama-Gewinnen/-Verlusten separat ab. Sound und Animationen funktionieren
+SFX enthält auch die positiven bzw. verärgerten Reaktionen bei eigenen
+Lama-Gewinnen/-Verlusten. Musik, Soundeffekte und Animationen funktionieren
 unabhängig voneinander. Zuganimationen laufen mit halber Geschwindigkeit;
 der Server wartet bis zum Ende der Stein- und Lama-Bewegungen. Neue Züge
 schneiden laufende Originalsounds nicht ab. Die Auswahl wird lokal gespeichert; beide Spieler

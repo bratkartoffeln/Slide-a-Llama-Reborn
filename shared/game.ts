@@ -1,7 +1,7 @@
 export const SIZE = 5;
 export const LAMA_STEP = 60;
 export const WIN_LEAD = 300;
-export const TILES = ['cherry', 'lemon', 'grape', 'melon', 'bell', 'seven'] as const;
+export const TILES = ['cherry', 'lemon', 'grape', 'melon', 'bell', 'seven', 'bar'] as const;
 export type Tile = typeof TILES[number];
 export const TILE_INFO: Record<Tile, { name: string; points: number; color: string }> = {
   cherry: { name: 'Kirsche', points: 10, color: '#d9544c' },
@@ -9,7 +9,8 @@ export const TILE_INFO: Record<Tile, { name: string; points: number; color: stri
   grape: { name: 'Traube', points: 30, color: '#9873b5' },
   melon: { name: 'Melone', points: 40, color: '#6c9f7a' },
   bell: { name: 'Glocke', points: 50, color: '#ce9439' },
-  seven: { name: 'Sieben', points: 60, color: '#d85d42' }
+  seven: { name: 'Sieben', points: 60, color: '#d85d42' },
+  bar: { name: 'BAR', points: 100, color: '#29353e' }
 };
 export type Cell = Tile | null;
 export type Board = Cell[][];
@@ -25,8 +26,8 @@ export interface Game {
 }
 export const cloneBoard = (board: Board): Board => board.map(row => [...row]);
 export function randomTile(random = Math.random): Tile {
-  // Common fruit offers steady matches; bells and sevens are rarer.
-  const bag: Tile[] = ['cherry', 'cherry', 'cherry', 'lemon', 'lemon', 'lemon', 'grape', 'grape', 'melon', 'melon', 'bell', 'seven'];
+  // Common fruit offers steady matches; bells, sevens and BAR are rarer.
+  const bag: Tile[] = ['cherry', 'cherry', 'cherry', 'lemon', 'lemon', 'lemon', 'grape', 'grape', 'melon', 'melon', 'bell', 'seven', 'bar'];
   return bag[Math.min(bag.length - 1, Math.floor(random() * bag.length))];
 }
 export function newGame(random = Math.random, turn: Seat = 0, revision = 0): Game {

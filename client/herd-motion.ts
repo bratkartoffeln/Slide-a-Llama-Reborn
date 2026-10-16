@@ -6,10 +6,12 @@ import { FEEDBACK_TIMING } from '../shared/feedback';
 export class HerdMotion {
   private teams: [number[], number[]] = [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]];
   private timers = new Set<ReturnType<typeof setTimeout>>();
+  private scheduled = new Set<HTMLElement>();
   private animations = new Set<Animation>();
   constructor(private root: HTMLElement, private enabled: () => boolean) {}
   clear() {
     for (const timer of this.timers) clearTimeout(timer); this.timers.clear();
+    this.scheduled.clear();
     for (const animation of this.animations) animation.cancel(); this.animations.clear();
     this.root.querySelectorAll('.is-crossing').forEach(element => element.classList.remove('is-crossing'));
   }
@@ -32,22 +34,31 @@ export class HerdMotion {
     this.refresh();
   }
   refresh() {
-    for (const timer of this.timers) clearTimeout(timer); this.timers.clear();
+    if (!this.enabled() || document.hidden) {
+      for (const timer of this.timers) clearTimeout(timer); this.timers.clear(); this.scheduled.clear(); return;
+    }
+    // State updates must not keep postponing a follower's next blink.
+    for (const figure of this.root.querySelectorAll<HTMLElement>('.llama-life')) if (!this.scheduled.has(figure)) this.schedule(figure, 1800 + Math.random() * 4500);
+  }
+  react() {
     if (!this.enabled() || document.hidden) return;
-    for (const figure of this.root.querySelectorAll<HTMLElement>('.llama-life')) this.schedule(figure, 1500 + Math.random() * 6500);
+    const figures = [...this.root.querySelectorAll<HTMLElement>('.mini-llama:not(.is-crossing) .llama-life')];
+    const figure = figures[Math.floor(Math.random() * figures.length)];
+    if (figure) this.animate(figure, [{ scale: '1 1', rotate: '0deg' }, { scale: '1.025 .96', rotate: '-3deg', offset: .35 }, { scale: '.99 1.015', rotate: '2deg', offset: .65 }, { scale: '1 1', rotate: '0deg' }], 1400);
   }
   private schedule(figure: HTMLElement, delay: number) {
+    this.scheduled.add(figure);
     const timer = setTimeout(() => {
       this.timers.delete(timer);
+      this.scheduled.delete(figure);
       if (!this.enabled() || document.hidden || !figure.isConnected) return;
       if (!figure.parentElement?.classList.contains('is-crossing')) {
         const variant = Math.random();
-        if (variant < .5) {
-          figure.querySelectorAll('.llama-eyes').forEach(eyes => this.animate(eyes, [{ scale: '1 1' }, { scale: '1 .05', offset: .35 }, { scale: '1 .05', offset: .65 }, { scale: '1 1' }], 160));
-          figure.querySelectorAll('.retro-eyelid').forEach(eyes => this.animate(eyes, [{ opacity: 0 }, { opacity: 1, offset: .2 }, { opacity: 1, offset: .8 }, { opacity: 0 }], 160));
-        } else this.animate(figure, [{ scale: '1 1', rotate: '0deg' }, { scale: variant < .75 ? '1.015 .975' : '.992 1.01', rotate: variant < .75 ? '0deg' : '1.3deg', offset: .5 }, { scale: '1 1', rotate: '0deg' }], 2000);
+        figure.querySelectorAll('.llama-eyes').forEach(eyes => this.animate(eyes, [{ scale: '1 1' }, { scale: '1 .05', offset: .35 }, { scale: '1 .05', offset: .65 }, { scale: '1 1' }], 160));
+        figure.querySelectorAll('.retro-eyelid').forEach(eyes => this.animate(eyes, [{ opacity: 0 }, { opacity: 1, offset: .2 }, { opacity: 1, offset: .8 }, { opacity: 0 }], 160));
+        if (variant > .65) this.animate(figure, [{ scale: '1 1', rotate: '0deg' }, { scale: variant < .85 ? '1.015 .975' : '.992 1.01', rotate: variant < .85 ? '0deg' : '1.3deg', offset: .5 }, { scale: '1 1', rotate: '0deg' }], 2000);
       }
-      this.schedule(figure, 5000 + Math.random() * 10000);
+      this.schedule(figure, 3000 + Math.random() * 6500);
     }, delay);
     this.timers.add(timer);
   }

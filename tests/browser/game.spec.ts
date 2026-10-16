@@ -10,7 +10,7 @@ test('Two browsers play, exchange safe chat, reconnect after reload, and agree o
   const host = await hostContext.newPage(), guest = await guestContext.newPage();
   const errors: string[] = []; host.on('pageerror', e => errors.push(e.message)); guest.on('pageerror', e => errors.push(e.message));
   await host.goto('/');
-  for (const id of ['theme-toggle','voices-toggle','sound','motion-toggle']) await expect(host.locator('#' + id)).toHaveAttribute('aria-pressed', 'true');
+  for (const id of ['theme-toggle','sfx-toggle','music','motion-toggle']) await expect(host.locator('#' + id)).toHaveAttribute('aria-pressed', 'true');
   await host.locator('#theme-toggle').click(); await host.locator('#name').fill('Alex'); await host.locator('#create').click();
   await expect(host.locator('#room-code')).toHaveText(/^[A-F0-9]{8}$/);
   const invite = await host.locator('#invite-link').inputValue();
@@ -73,7 +73,7 @@ test('Mobile lobby, rules, training and touch targets fit without horizontal scr
 });
 test('Theme and motion preferences persist, and disabling animations settles an active move', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#voices-toggle').click();
+  await page.locator('#sfx-toggle').click();
   await page.locator('#name').fill('Retro'); await page.locator('#practice').click();
   await expect(page.locator('#turn-label')).toContainText('Du bist dran');
   await page.getByRole('button', { name: 'Spalte 3 von oben einschieben' }).click();
@@ -88,7 +88,7 @@ test('Theme and motion preferences persist, and disabling animations settles an 
   await expect(page.locator('body')).toHaveAttribute('data-theme', 'retro');
   await expect(page.locator('body')).toHaveClass(/motion-off/);
   await expect(page.locator('#room-code')).toHaveText(code!);
-  await expect(page.locator('#voices-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#sfx-toggle')).toHaveAttribute('aria-pressed', 'false');
   expect(await page.locator('.retro-art').evaluateAll((images: HTMLImageElement[]) => images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
   const audio = await page.evaluate(async files => {
     const context = new AudioContext();
@@ -100,7 +100,7 @@ test('Theme and motion preferences persist, and disabling animations settles an 
       }));
     } finally { await context.close(); }
   }, SOUND_FILES);
-  expect(audio).toHaveLength(62); expect(audio.every(Boolean)).toBe(true);
+  expect(audio).toHaveLength(SOUND_FILES.length); expect(audio.every(Boolean)).toBe(true);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('#motion-toggle')).toBeDisabled();
   await page.emulateMedia({ reducedMotion: 'no-preference' });

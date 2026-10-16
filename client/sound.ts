@@ -1,10 +1,28 @@
 import type { Board, Game, Seat } from '../shared/game';
-import { MATCH_SOUNDS, LAMA_SOUNDS, COMBO_SOUND, STONE_SOUNDS, CHAT_SOUND } from './audio-catalog';
+import { MATCH_SOUNDS, LAMA_SOUNDS, COMBO_SOUND, STONE_SOUNDS, CHAT_SOUND, IDLE_LAMA_SOUNDS, MUSIC_SOUND } from './audio-catalog';
 import { SoundVariants, turnSounds, type TurnSound } from './sound-events';
 
 type Cue = 'move' | 'match' | 'combo' | 'win' | 'chat';
-type Channel = 'effect' | 'voice' | 'accent' | 'stone' | 'chat';
+type Channel = 'effect' | 'voice' | 'accent' | 'stone' | 'chat' | 'idle';
 type SampleRequest = { file: string; channel: Channel; volume: number; fallback: Cue };
+
+/** Music loops independently of every SFX channel and pauses outside active play. */
+export class GameMusic {
+  private sample: HTMLAudioElement | null = null;
+  private active = false;
+  private enabled = false;
+  private starting = false;
+  setEnabled(enabled: boolean) { this.enabled = enabled; this.refresh(); }
+  setPlaying(active: boolean) { if (this.active !== active) { this.active = active; this.refresh(); } }
+  refresh() {
+    if (!this.enabled || !this.active || document.hidden) { this.sample?.pause(); return; }
+    this.sample ??= new Audio(MUSIC_SOUND);
+    this.sample.loop = true; this.sample.volume = .12;
+    if (!this.sample.paused || this.starting) return;
+    this.starting = true;
+    void this.sample.play().catch(() => { /* Retry after the next user interaction if autoplay was blocked. */ }).finally(() => { this.starting = false; });
+  }
+}
 
 /** Local original effects follow each resolved turn in either visual theme. */
 export class GameAudio {
@@ -16,12 +34,20 @@ export class GameAudio {
   private generation = 0;
   private queue: SampleRequest[] = [];
   private lastTurnId: string | undefined;
+  private lastActivity = 0;
   enabled = false;
   voicesEnabled = true;
-  playChat() { if (this.enabled) this.original(CHAT_SOUND, 'chat', .5, 'chat'); }
+  playChat() { if (this.enabled) { this.stopIdle(); this.original(CHAT_SOUND, 'chat', .5, 'chat'); } }
+  playIdleLama(): boolean {
+    if (!this.enabled || !this.voicesEnabled || document.hidden || this.samples.size || this.queue.length || this.timers.size || Date.now() - this.lastActivity < 10000) return false;
+    this.original(this.variants.next('idle', IDLE_LAMA_SOUNDS), 'idle', .22, 'chat');
+    return true;
+  }
+  private stopIdle() { for (const [sample, channel] of this.samples) if (channel === 'idle') this.stopSample(sample); }
   setEnabled(enabled: boolean) { this.enabled = enabled; if (!enabled) this.cancel(); }
   setVoicesEnabled(enabled: boolean) {
     this.voicesEnabled = enabled;
+    if (!enabled) this.stopIdle();
     if (!enabled) this.queue = this.queue.filter(request => request.channel !== 'voice');
     if (!enabled) for (const [sample, channel] of this.samples) if (channel === 'voice') this.stopSample(sample);
   }
@@ -40,6 +66,7 @@ export class GameAudio {
     // muting or hiding the game cancels playback and pending events.
     if (!this.enabled || document.hidden) return;
     if (turnId && turnId === this.lastTurnId) return;
+    this.stopIdle(); this.lastActivity = Date.now();
     this.lastTurnId = turnId;
     const generation = this.generation;
     for (const cue of turnSounds(last, before, after, you, animated, previous)) {
@@ -62,6 +89,7 @@ export class GameAudio {
     try { sample.currentTime = 0; } catch {}
   }
   private original(file: string, channel: Channel, volume: number, fallback: Cue) {
+    this.lastActivity = Date.now();
     const active = [...this.samples.values()].filter(c => c === channel).length;
     const limit = channel === 'voice' ? 1 : channel === 'effect' || channel === 'stone' ? 4 : 2;
     if (active >= limit) { this.queue.push({ file, channel, volume, fallback }); return; }
@@ -70,6 +98,7 @@ export class GameAudio {
     this.samples.set(sample, channel);
     const finish = () => {
       if (!this.samples.delete(sample) || generation !== this.generation) return;
+      this.lastActivity = Date.now();
       const next = this.queue.findIndex(request => request.channel === channel);
       if (next >= 0) { const request = this.queue.splice(next, 1)[0]; this.original(request.file, request.channel, request.volume, request.fallback); }
     };
@@ -77,7 +106,7 @@ export class GameAudio {
     sample.addEventListener('error', finish, { once: true });
     void sample.play().catch(() => {
       finish();
-      if (this.enabled && generation === this.generation && (channel !== 'voice' || this.voicesEnabled)) this.play(fallback);
+      if (channel !== 'idle' && this.enabled && generation === this.generation && (channel !== 'voice' || this.voicesEnabled)) this.play(fallback);
     });
   }
   play(cue: Cue) {

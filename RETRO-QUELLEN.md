@@ -35,6 +35,7 @@ Dateien wurden unverändert übernommen; Skalierung und Darstellung erfolgen im 
 | `pear.png` | `pear.png`, Retro-Darstellung des Melone-Steins |
 | `bell.png` | `Bel.png`, Glocke |
 | `seven.png` | `Seven.png`, Sieben |
+| `bar.png` | `bar.png`, BAR, aus demselben oben verlinkten Repository |
 | `follower.png` | Flash-Sprite 690 `worshiper1`, Frame 1, siehe unten |
 | `flower.svg` | Eigene SVG-Zeichnung für den Fenster-/Statusstil |
 
@@ -63,16 +64,30 @@ Original dieselbe Symbolgruppe; eine zusätzliche Kaskade erhält den Ketteneffe
 | `original/fruit3-0` bis `fruit3-5.mp3` | Tags 21–26 | Pflaume / moderne Traube, 6 Varianten |
 | `original/fruit4-0` bis `fruit4-8.mp3` | Tags 27–35 | Birne / moderne Melone, 9 Varianten |
 | `original/fruit5-0` bis `fruit5-6.mp3` | Tags 36–42 | Kirsche, 7 Varianten |
+| `original/fruit6-0` bis `fruit6-3.mp3` | Tags 43–46 | BAR, 4 Varianten |
 | `original/fruit7-0` bis `fruit7-2.mp3` | Tags 47–49 | Sieben, 3 Varianten |
 | `retro-combo.mp3` | 837 / `combo` | Ab der zweiten Kaskade |
 | `original/transhappy1.mp3` bis `transhappy7.mp3` | 839–844 und 53 | Freude über hinzugewonnene Lamas |
 | `original/transpissed1.mp3` bis `transpissed3.mp3` | 52, 51, 50 | Verärgerung über verlorene Lamas |
+| `original/lama-idle-1.mp3` bis `lama-idle-9.mp3` | 351, 374, 405, 441, 474, 481, 528, 555, 556 | Originale `maknit1`–`maknit9` aus Sprite 690 |
 
-45 Treffer-Varianten, zehn Stimmen, ein Ketteneffekt und fünf mechanische
-Effekte: insgesamt 61 Dateien aus dem Spiel, dazu ein ICQ-Nachrichtenton.
+Die Original-Ruhelogik (`frame_33`, `doIdleAnim`) kombiniert stumme Idle-Bewegungen
+mit gelegentlichen `maknit`-Reaktionen. Deren neun `StartSound`-Tags wurden in der
+Timeline von Sprite 690 nachgeschlagen und unverändert exportiert. Die Neuauflage
+versucht alle 20–45 Sekunden eine leise Reaktion; laufende Sounds, Combo-Timer,
+Lamawechsel und die letzten zehn Sekunden nach anderen Sounds sperren sie.
+Zugbeginn oder Chatton beenden eine noch laufende Ruhe-Reaktion. Ausgeschaltete
+Stimmen, stummes Spiel und ein unsichtbarer Browser-Tab verhindern sie ebenfalls.
+
+49 Treffer-Varianten, zehn Transferstimmen, neun gelegentliche Lama-Laute,
+ein Ketteneffekt und fünf mechanische Effekte: insgesamt 74 Dateien aus dem Spiel,
+dazu ein ICQ-Nachrichtenton.
+Die Hintergrundmusik `original/background-music.mp3` ist der unveränderte
+SWF-Export von Tag 838 (`music1`). Sie läuft in aktiven Runden als Schleife mit
+separater Musiknoten-Taste. SFX steuert alle übrigen Geräusche unabhängig davon.
 Die Spielsounds stammen aus den Sound-Tags; bis auf den unten beschriebenen,
-aus zwei Originalsamples rekonstruierten Fall-Sound bleiben sie unverändert. Die unbenutzte
-BAR-Gruppe `fruit6` wird nicht ausgeliefert. Eine gemischte Auswahl verwendet
+aus zwei Originalsamples rekonstruierten Fall-Sound bleiben sie unverändert. Die bisher unbenutzte
+BAR-Gruppe `fruit6` wird seit 0.1.10 ebenfalls ausgeliefert. Eine gemischte Auswahl verwendet
 alle Varianten einmal, bevor sie erneut gemischt wird, ohne direkte Wiederholung.
 
 Die konkrete Zuordnung ist im exportierten Originalcode belegt:
@@ -154,7 +169,7 @@ Dieser Abgleich unterstützt die Zuordnung trotz der gemischten Videotonspur:
 | 01:18,674 | `transhappy5` | 0,517 |
 
 Die Einzelsamples aus der SWF vermeiden die überlagerten Musik-/Spielsounds
-des Videos. Der Browser prüft das erfolgreiche Decodieren aller 62 Spieldateien.
+des Videos. Der Browser prüft das erfolgreiche Decodieren aller eingebundenen Audiodateien.
 Die Wiedergabe startet pro tatsächlichem Zug, nicht beim Laden oder Reconnect.
 Laufende Samples werden durch neue Züge nicht abgeschnitten. Bei voller
 Kanalbelegung warten weitere Samples bis zum Ende eines laufenden Sounds.
@@ -193,8 +208,9 @@ Ruhebewegungen: voneinander unabhängige Zeitgeber statt synchroner Bewegung,
 Abschalten bricht laufende Animationen ab; `prefers-reduced-motion`
 deaktiviert Bewegung unabhängig vom gespeicherten Schalter.
 
-Die existierenden sechs Steintypen, Punkte, Vorschau und Zeitwahl bleiben die
-Abstimmung dieses Projekts. Das Originalvideo zeigt sieben Symbole inklusive BAR
-und die Werte 10/20/30/40/70/100/150. Der Retro-Schalter behauptet deshalb keine
-vollständige Regelkopie und ergänzt weder BAR noch Poker. Die neu angeforderte
+Die sechs bisherigen Steintypen, Punkte, Vorschau und Zeitwahl bleiben die
+Abstimmung dieses Projekts. Seit 0.1.10 ergänzt BAR die Auswahl mit 100 Punkten
+pro Dreierreihe, entsprechend `fruitScore[7]` im Originalcode. Das Originalvideo
+zeigt sieben Symbole und die Werte 10/20/30/40/70/100/150. Der Retro-Schalter
+behauptet deshalb keine vollständige Regelkopie; Poker bleibt ausgeschlossen. Die
 Kontaktregel ist in beiden Layouts serverseitig implementiert.

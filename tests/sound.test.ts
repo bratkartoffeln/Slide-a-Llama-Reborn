@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { turnSounds, SoundVariants, FEEDBACK_TIMING } from '../client/sound-events';
-import { boardMotionMs, turnMotionMs } from '../shared/feedback';
+import { boardMotionMs, turnMotionMs, sideEjectImpactMs } from '../shared/feedback';
 import { MATCH_SOUNDS, ORIGINAL_SOUND_FILES } from '../client/audio-catalog';
 import { newGame, play, type Board } from '../shared/game';
 
@@ -17,6 +17,13 @@ test('Sounds follow the resolved symbols in every cascade instead of the inserte
   assert.deepEqual(cues.filter(c => c.kind === 'match').map(c => [c.tile, c.multiplier]), [['cherry', 1], ['lemon', 2]]);
   assert.equal(cues.filter(c => c.kind === 'combo').length, 1);
   assert.ok(cues.filter(c => c.kind === 'match').every(c => c.delay >= 270));
+});
+
+test('BAR matches select the four original fruit6 variants', () => {
+  const game = newGame(); game.board = empty(); game.board[4][0] = game.board[4][1] = 'bar'; game.queue[0] = 'bar';
+  const next = play(game, 0, { side: 'left', lane: 4 });
+  assert.ok(turnSounds(next.lastMove!, game.scores, next.scores, 0).some(cue => cue.kind === 'match' && cue.tile === 'bar'));
+  assert.deepEqual(MATCH_SOUNDS.bar, Array.from({ length: 4 }, (_, i) => `/audio/original/fruit6-${i}.mp3`));
 });
 test('Lama reactions depend on gaining or losing a follower, with no voice on unchanged teams', () => {
   const game = newGame(); const next = play(game, 0, { side: 'top', lane: 0 }); const last = next.lastMove!;
@@ -62,8 +69,8 @@ test('Crossed lines of the same symbol use one matching sound and all sound bank
   const next = play(game, 0, { side: 'top', lane: 2 });
   assert.equal(turnSounds(next.lastMove!, game.scores, next.scores, 0).filter(c => c.kind === 'match').length, 1);
 });
-test('All 61 catalogued original files are present and distinct; silent scheduling still follows cascades', () => {
-  assert.equal(ORIGINAL_SOUND_FILES.length, 61); assert.equal(new Set(ORIGINAL_SOUND_FILES).size, 61);
+test('All 74 catalogued original files are present and distinct; silent scheduling still follows cascades', () => {
+  assert.equal(ORIGINAL_SOUND_FILES.length, 74); assert.equal(new Set(ORIGINAL_SOUND_FILES).size, 74);
   for (const file of ORIGINAL_SOUND_FILES) assert.ok(readFileSync(new URL('../public' + file, import.meta.url)).length > 500, file);
   const game = newGame(); game.board = empty(); game.board[4][1] = game.board[4][2] = 'bell'; game.queue[0] = 'bell';
   const next = play(game, 0, { side: 'top', lane: 0 });
@@ -104,4 +111,20 @@ test('Server gate and original transfer sounds follow the slower stone and follo
   const cues = turnSounds(last, [0, 0], [60, 0], 0);
   assert.ok(!cues.some(c => c.kind === 'stone' && /transfer/.test(c.action)));
   assert.ok(cues.some(c => c.kind === 'voice' && c.mood === 'happy' && c.delay === boardMotionMs(last)));
+});
+
+test('Side-ejected stones sound and break only at floor impact; the next turn waits', () => {
+  for (const side of ['left', 'right'] as const) {
+    const game = newGame(); game.board = empty(); game.board[4] = ['cherry', 'lemon', 'grape', 'melon', 'bar']; game.queue[0] = 'bell';
+    const next = play(game, 0, { side, lane: 4 }), last = next.lastMove!;
+    const impact = sideEjectImpactMs(game.board, last.move);
+    assert.equal(impact, FEEDBACK_TIMING.insert + FEEDBACK_TIMING.ejectTip + FEEDBACK_TIMING.ejectFall);
+    const cues = turnSounds(last, [0, 0], [60, 0], 0, true, game.board);
+    assert.equal(cues.find(cue => cue.kind === 'stone' && cue.action === 'burst')!.delay, impact);
+    assert.equal(cues.find(cue => cue.kind === 'stone' && cue.action === 'drop')!.delay, impact);
+    assert.equal(boardMotionMs(last, game.board), impact + FEEDBACK_TIMING.burst);
+    assert.equal(cues.find(cue => cue.kind === 'voice')!.delay, impact + FEEDBACK_TIMING.burst);
+    game.board[4][2] = null;
+    assert.equal(sideEjectImpactMs(game.board, last.move), 0);
+  }
 });
