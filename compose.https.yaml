@@ -1,0 +1,30 @@
+# Optional, separate DNS-01 proxy. No connection to the RPS network or volumes.
+services:
+  caddy:
+    build: ./deploy/caddy-dynv6
+    init: true
+    restart: unless-stopped
+    depends_on:
+      game:
+        condition: service_healthy
+    environment:
+      SLIDE_DOMAIN: "${SLIDE_DOMAIN:?Set a separate Slide-a-Lama hostname in .env}"
+    ports:
+      - "${SLIDE_HTTPS_PORT:-19943}:443/tcp"
+    volumes:
+      - type: bind
+        source: ./Caddyfile.dns
+        target: /etc/caddy/Caddyfile
+        read_only: true
+        bind:
+          create_host_path: false
+      - caddy_data:/data
+      - caddy_config:/config
+    secrets:
+      - dynv6_api_token
+volumes:
+  caddy_data:
+  caddy_config:
+secrets:
+  dynv6_api_token:
+    file: ./secrets/dynv6_api_token
