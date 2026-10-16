@@ -17,7 +17,10 @@ test('New turns let original samples finish; queued voices resume on ended and m
   Object.defineProperty(globalThis, 'document', { configurable: true, value: { hidden: false } });
   const audio = new GameAudio(); audio.setEnabled(true);
   try {
-    const game = newGame(); const last = play(game, 0, { side: 'top', lane: 0 }).lastMove!;
+    const game = newGame();
+    // This test exercises the voice queue, not randomly generated cascades and their delays.
+    game.board = Array.from({ length: 5 }, () => Array(5).fill(null));
+    const last = play(game, 0, { side: 'top', lane: 0 }).lastMove!;
     audio.playTurn(last, [0, 0], [60, 0], 0, false, game.board, 'room:1:1');
     await new Promise(resolve => setTimeout(resolve, 25));
     const firstVoice = samples.find(sample => sample.src.includes('transhappy'))!;
