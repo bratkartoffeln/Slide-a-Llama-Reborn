@@ -18,11 +18,14 @@ body[data-theme=retro] .tile .retro-art{mix-blend-mode:multiply;object-fit:conta
 .tile.preview,body[data-theme=retro] .tile.preview{background:none;box-shadow:none;filter:drop-shadow(0 0 3px #ffe19a)}
 .tile.empty,body[data-theme=retro] .tile.empty{background:none;border:0;box-shadow:none;filter:none;opacity:.34}
 .tile.empty:before{display:none}.tile.empty:after{background:#af9a6b35;box-shadow:inset 1px 2px 5px #65522c55}
-.tile.matched,body[data-theme=retro] .tile.matched{background:none;animation:stone-vanish .18s ease-in both}
+.tile.matched,body[data-theme=retro] .tile.matched{background:none;animation:stone-vanish .36s ease-in both}
 .tile.matched:after{inset:0;border:0;border-radius:0;animation:none}
 @keyframes stone-vanish{0%{opacity:1;transform:scale(1)}30%{opacity:1;transform:scale(1.04)}100%{opacity:0;transform:scale(.88)}}
 .board-effects{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:clip}
 .stone-fragment{position:absolute;display:block;pointer-events:none;will-change:transform,opacity}
+.stone-shockwave{position:absolute;pointer-events:none;border:3px solid #fff5c8;border-radius:50%;background:radial-gradient(circle,#fff9dbaa 0, #ffd56d55 25%,transparent 65%);box-shadow:0 0 15px #ffbd4388,inset 0 0 18px #fff3c3;mix-blend-mode:screen}
+.stone-spark,.stone-dust{position:absolute;display:block;pointer-events:none;width:5px;height:5px;background:#ffe7a1;box-shadow:0 0 5px #ffcb5f}
+.stone-dust{width:9px;height:9px;border-radius:50%;background:#c4a06b77;box-shadow:none;filter:blur(2px)}
 .stone-fragment>.tile-piece{display:flex;width:100%;height:100%;align-items:center;justify-content:center;aspect-ratio:auto;animation:none}
 .score-popup{position:absolute;display:flex;flex-direction:column;align-items:center;white-space:nowrap;color:#c35d32;line-height:1;font-family:'Arial Black','Segoe UI',sans-serif;text-align:center;will-change:transform,opacity;z-index:6;text-shadow:0 2px #fff8dc,2px 0 #fff8dc,-2px 0 #fff8dc,0 -2px #fff8dc,0 4px 4px #30241466}
 .score-popup strong{font-size:clamp(25px,4vw,42px);letter-spacing:-1.5px}.score-popup small{margin-top:6px;font-size:10px;letter-spacing:1px;color:#6c4822}
@@ -33,10 +36,42 @@ body[data-theme=retro] .score-popup.opponent-points{color:#6158dd}
 .llama-eyes{transform-box:fill-box;transform-origin:center}
 .mini-llama{position:relative;transform-origin:center bottom}
 .mini-llama.is-crossing{z-index:3}
-.mini-llama.is-crossing .llama-life{transform:scaleX(-1);animation:llama-stride .16s ease-in-out infinite alternate}
+.mini-llama.is-crossing .llama-life{transform:scaleX(-1);animation:llama-stride .32s ease-in-out infinite alternate}
 @keyframes llama-stride{from{scale:1.035 .96;rotate:-2deg}to{scale:.975 1.025;rotate:2deg}}
 .voices-toggle[aria-pressed=false]{opacity:.55;text-decoration:line-through}
 body[data-theme=retro] .voices-toggle{font-size:10px;padding:7px}
 @media(max-width:680px){.site-header nav{gap:7px}.site-header .voices-toggle{font-size:10px;padding:7px}.score-popup strong{font-size:29px}.score-popup small{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.board-effects{display:none}}
 body.motion-off .board-effects{display:none}
+
+/* Four stone pockets on a carved wheel; the current stone is at twelve o'clock. */
+.tile-queue,body[data-theme=retro] .tile-queue{display:flex;justify-content:center;align-items:center;gap:20px;padding:16px 8px 0;margin:0;background:none;border:0}
+.queue-wheel{position:relative;flex:none;width:174px;height:174px;transform-origin:center}
+.wheel-plate{position:absolute;inset:17px;border-radius:50%;background:repeating-conic-gradient(from 12deg,#8e714f55 0deg 2deg,transparent 2deg 30deg),radial-gradient(circle,#ad8b58 0 13%,#f3deb0 14% 19%,#c7aa71 20% 55%,#e9d2a0 56% 66%,#9a7c50 67% 71%,#e4c78b 72%);border:4px solid #b49762;box-shadow:inset 0 3px 4px #fff1c9,0 5px 0 #81643f,0 7px 7px #352b2726}
+.wheel-plate i{position:absolute;inset:13px;border:2px dashed #94714388;border-radius:50%}
+.wheel-plate b{position:absolute;inset:0;display:grid;place-items:center;color:#79582d;font-size:22px;text-shadow:0 1px #ffe9ad}
+.queue-wheel .current-tile{position:absolute;left:50%;top:0;transform:translateX(-50%);gap:0;z-index:1}
+.queue-wheel .current-tile>span{position:absolute;left:50%;top:-13px;transform:translateX(-50%);white-space:nowrap}
+.queue-wheel .current-tile>div,body[data-theme=retro] .queue-wheel .current-tile>div{width:43px;height:43px;border:2px solid #ad7641;background:#fff6db;border-radius:5px;box-shadow:0 3px 0 #8c683a,0 0 0 3px #f4d89b}
+.queue-wheel .next-tiles{display:contents}
+.queue-wheel .next-tiles>span{position:absolute;right:-20px;top:30px;font-size:7px}
+.queue-wheel #next-tiles{display:contents}
+.queue-wheel #next-tiles>div,body[data-theme=retro] .queue-wheel #next-tiles>div{position:absolute;width:38px;height:38px;background:#f5e8c8;border:1px solid #b09058;border-radius:4px;box-shadow:0 3px 0 #937343}
+.queue-wheel #next-tiles>div:nth-child(1){right:0;top:50%;transform:translateY(-50%)}
+.queue-wheel #next-tiles>div:nth-child(2){bottom:0;left:50%;transform:translateX(-50%)}
+.queue-wheel #next-tiles>div:nth-child(3){left:0;top:50%;transform:translateY(-50%)}
+.queue-wheel .tile-art{display:block;width:100%;height:100%}
+.queue-wheel .tile-art svg{height:100%}
+.tile-queue .queue-hint{margin:0;text-align:left;max-width:90px}
+body[data-theme=retro] .wheel-plate{filter:saturate(1.4);border-color:#b79526}
+
+.ejected-stone{position:absolute;z-index:7;pointer-events:none;transform-origin:center bottom}
+.ejected-stone>.tile{display:flex;width:100%;height:100%;align-items:center;justify-content:center;animation:none}
+.move-button,body[data-theme=retro] .move-button{opacity:0;background:transparent;border-color:transparent;box-shadow:none;transition:opacity .16s}
+.move-button.active-arrow,body[data-theme=retro] .move-button.active-arrow{opacity:1}
+.mini-llama{transition:none}
+.is-crossing .llama-feet{animation:llama-feet .32s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
+@keyframes llama-feet{from{translate:-2px 1px;rotate:-6deg}to{translate:2px -2px;rotate:6deg}}
+
+#theme-toggle[aria-pressed=true],#voices-toggle[aria-pressed=true],#sound[aria-pressed=true],#motion-toggle[aria-pressed=true]{color:#24520b;background:linear-gradient(#deffaf,#abe65d);border:1px solid #629a2c;box-shadow:inset 1px 1px #f1ffd8,inset -1px -1px #83b647,0 1px 0 #557e2d55;opacity:1;text-decoration:none}
+#theme-toggle[aria-pressed=true]:hover,#voices-toggle[aria-pressed=true]:hover,#sound[aria-pressed=true]:hover,#motion-toggle[aria-pressed=true]:hover{background:linear-gradient(#ecffcb,#bbed78)}

@@ -1,11 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { ORIGINAL_SOUND_FILES } from '../../client/audio-catalog';
+import { SOUND_FILES } from '../../client/audio-catalog';
 test('Two browsers play, exchange safe chat, reconnect after reload, and agree on a rematch', async ({ browser }) => {
   const hostContext = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
   const guestContext = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  for (const context of [hostContext, guestContext]) await context.addInitScript(() => {
+    Object.assign(window, { chatSounds: 0 });
+    HTMLMediaElement.prototype.play = function () { if (this.src.endsWith('/icq-uh-oh.mp3')) (window as any).chatSounds++; return Promise.resolve(); };
+  });
   const host = await hostContext.newPage(), guest = await guestContext.newPage();
   const errors: string[] = []; host.on('pageerror', e => errors.push(e.message)); guest.on('pageerror', e => errors.push(e.message));
-  await host.goto('/'); await host.locator('#name').fill('Alex'); await host.locator('#create').click();
+  await host.goto('/');
+  for (const id of ['theme-toggle','voices-toggle','sound','motion-toggle']) await expect(host.locator('#' + id)).toHaveAttribute('aria-pressed', 'true');
+  await host.locator('#theme-toggle').click(); await host.locator('#name').fill('Alex'); await host.locator('#create').click();
   await expect(host.locator('#room-code')).toHaveText(/^[A-F0-9]{8}$/);
   const invite = await host.locator('#invite-link').inputValue();
   await host.locator('#theme-toggle').click();
@@ -22,8 +28,11 @@ test('Two browsers play, exchange safe chat, reconnect after reload, and agree o
   await host.getByRole('button', { name: 'Nachricht senden' }).click();
   await expect(guest.locator('#messages')).toContainText('<img src=x onerror=alert(1)> Hallo 🦙');
   await expect(guest.locator('#messages img')).toHaveCount(0);
+  await expect.poll(() => guest.evaluate(() => (window as any).chatSounds)).toBe(1);
+  expect(await host.evaluate(() => (window as any).chatSounds)).toBe(0);
   await guest.reload(); await expect(guest.locator('#connection-label')).toContainText('verbunden');
   await expect(guest.locator('#messages')).toContainText('Hallo 🦙');
+  expect(await guest.evaluate(() => (window as any).chatSounds)).toBe(0);
   await expect(host.locator('.move-button:enabled')).toHaveCount(15);
   await host.screenshot({ path: 'test-results/desktop-game.png', fullPage: true });
   await guest.locator('#resign').click(); await guest.locator('#confirm-yes').click();
@@ -36,7 +45,7 @@ test('Two browsers play, exchange safe chat, reconnect after reload, and agree o
 test('Mobile lobby, rules, training and touch targets fit without horizontal scrolling', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
   const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/');
+  await page.goto('/'); await page.locator('#theme-toggle').click();
   await page.screenshot({ path: 'test-results/mobile-lobby.png', fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.locator('#rules-open').click(); await expect(page.locator('#rules')).toBeVisible(); await page.locator('#rules-play').click();
@@ -58,7 +67,6 @@ test('Mobile lobby, rules, training and touch targets fit without horizontal scr
 test('Theme and motion preferences persist, and disabling animations settles an active move', async ({ page }) => {
   await page.goto('/');
   await page.locator('#voices-toggle').click();
-  await page.locator('#theme-toggle').click();
   await page.locator('#name').fill('Retro'); await page.locator('#practice').click();
   await expect(page.locator('#turn-label')).toContainText('Du bist dran');
   await page.getByRole('button', { name: 'Spalte 3 von oben einschieben' }).click();
@@ -84,8 +92,8 @@ test('Theme and motion preferences persist, and disabling animations settles an 
         return response.headers.get('content-type') === 'audio/mpeg' && buffer.duration > 0;
       }));
     } finally { await context.close(); }
-  }, ORIGINAL_SOUND_FILES);
-  expect(audio).toHaveLength(56); expect(audio.every(Boolean)).toBe(true);
+  }, SOUND_FILES);
+  expect(audio).toHaveLength(62); expect(audio.every(Boolean)).toBe(true);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('#motion-toggle')).toBeDisabled();
   await page.emulateMedia({ reducedMotion: 'no-preference' });

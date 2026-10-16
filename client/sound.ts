@@ -1,9 +1,10 @@
-﻿import type { Game, Seat } from '../shared/game';
-import { MATCH_SOUNDS, LAMA_SOUNDS, COMBO_SOUND } from './audio-catalog';
+import type { Board, Game, Seat } from '../shared/game';
+import { MATCH_SOUNDS, LAMA_SOUNDS, COMBO_SOUND, STONE_SOUNDS, CHAT_SOUND } from './audio-catalog';
 import { SoundVariants, turnSounds, type TurnSound } from './sound-events';
 
 type Cue = 'move' | 'match' | 'combo' | 'win' | 'chat';
-type Channel = 'effect' | 'voice' | 'accent';
+type Channel = 'effect' | 'voice' | 'accent' | 'stone' | 'chat';
+type SampleRequest = { file: string; channel: Channel; volume: number; fallback: Cue };
 
 /** Local original effects follow each resolved turn in either visual theme. */
 export class GameAudio {
@@ -13,26 +14,31 @@ export class GameAudio {
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private variants = new SoundVariants();
   private generation = 0;
+  private queue: SampleRequest[] = [];
   enabled = false;
   voicesEnabled = true;
+  playChat() { if (this.enabled) this.original(CHAT_SOUND, 'chat', .5, 'chat'); }
   setEnabled(enabled: boolean) { this.enabled = enabled; if (!enabled) this.cancel(); }
   setVoicesEnabled(enabled: boolean) {
     this.voicesEnabled = enabled;
+    if (!enabled) this.queue = this.queue.filter(request => request.channel !== 'voice');
     if (!enabled) for (const [sample, channel] of this.samples) if (channel === 'voice') this.stopSample(sample);
   }
   cancel() {
     this.generation++;
+    this.queue = [];
     for (const timer of this.timers) clearTimeout(timer);
     this.timers.clear();
     for (const sample of this.samples.keys()) this.stopSample(sample);
     for (const oscillator of this.oscillators) { try { oscillator.stop(); } catch {} }
     this.oscillators.clear();
   }
-  playTurn(last: NonNullable<Game['lastMove']>, before: [number, number], after: [number, number], you: Seat, animated: boolean) {
-    this.cancel();
+  playTurn(last: NonNullable<Game['lastMove']>, before: [number, number], after: [number, number], you: Seat, animated: boolean, previous: Board) {
+    // Let previous samples finish, including long original voices. Only leaving,
+    // muting or hiding the game cancels playback and pending events.
     if (!this.enabled || document.hidden) return;
     const generation = this.generation;
-    for (const cue of turnSounds(last, before, after, you, animated)) {
+    for (const cue of turnSounds(last, before, after, you, animated, previous)) {
       const timer = setTimeout(() => {
         this.timers.delete(timer);
         if (this.enabled && !document.hidden && generation === this.generation) this.emit(cue);
@@ -41,7 +47,7 @@ export class GameAudio {
     }
   }
   private emit(cue: TurnSound) {
-    if (cue.kind === 'move') { this.play('move'); return; }
+    if (cue.kind === 'stone') { this.original(STONE_SOUNDS[cue.action], 'stone', .42, 'move'); return; }
     if (cue.kind === 'voice') {
       if (this.voicesEnabled) this.original(this.variants.next('voice-' + cue.mood, LAMA_SOUNDS[cue.mood]), 'voice', .4, 'chat');
     } else if (cue.kind === 'combo') this.original(COMBO_SOUND, 'accent', .24, 'combo');
@@ -52,15 +58,21 @@ export class GameAudio {
     try { sample.currentTime = 0; } catch {}
   }
   private original(file: string, channel: Channel, volume: number, fallback: Cue) {
-    const active = [...this.samples].filter(([, c]) => c === channel).map(([sample]) => sample);
-    for (const sample of active) sample.volume = .12;
-    while (active.length >= (channel === 'effect' ? 2 : 1)) this.stopSample(active.shift()!);
+    const active = [...this.samples.values()].filter(c => c === channel).length;
+    const limit = channel === 'voice' ? 1 : channel === 'effect' || channel === 'stone' ? 4 : 2;
+    if (active >= limit) { this.queue.push({ file, channel, volume, fallback }); return; }
     const sample = new Audio(file); sample.volume = volume;
     const generation = this.generation;
     this.samples.set(sample, channel);
-    sample.addEventListener('ended', () => this.samples.delete(sample), { once: true });
+    const finish = () => {
+      if (!this.samples.delete(sample) || generation !== this.generation) return;
+      const next = this.queue.findIndex(request => request.channel === channel);
+      if (next >= 0) { const request = this.queue.splice(next, 1)[0]; this.original(request.file, request.channel, request.volume, request.fallback); }
+    };
+    sample.addEventListener('ended', finish, { once: true });
+    sample.addEventListener('error', finish, { once: true });
     void sample.play().catch(() => {
-      this.stopSample(sample);
+      finish();
       if (this.enabled && generation === this.generation && (channel !== 'voice' || this.voicesEnabled)) this.play(fallback);
     });
   }

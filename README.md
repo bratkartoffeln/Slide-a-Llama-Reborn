@@ -1,6 +1,6 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.3** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.4** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
 Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
@@ -61,18 +61,30 @@ Punkte und Spielzustand bleiben gleich.
 Die Spielsteine haben unregelmäßige, abgeschlagene Tempelstein-Profile mit
 Sandsteinstruktur und sichtbarer Tiefe. Treffer zerlegen sie in Fragmente;
 die Punkte steigen direkt über der Kombination auf, bei Kaskaden mit Faktor.
+Lichtblitz, Druckwelle, Staub und ein kurzes Rütteln verstärken den Bruch.
+Bei voller Spalte zerplatzt der unterste Stein, sobald ein neuer von oben
+eingeschoben wird. Die Vorschau sitzt auf einem animierten Drehrad.
+Nur der gerade gewählte Einschubpfeil ist sichtbar; alle Touchflächen bleiben erhalten.
 Die Lamas wechseln tatsächlich ihre Plätze, wippen beim Laufen und blinzeln
 im Stand mit voneinander unabhängigen Ruhebewegungen.
 
 **✦** schaltet Einschub-, Bruch-, Punkte-, Fall-, Trefferketten-, Lamawechsel- und Sieganimationen
 an oder aus. Ausschalten beendet laufende Animationen sofort; der endgültige
 Spielstand erscheint direkt. Die Systemeinstellung für reduzierte Bewegung
-hat Vorrang. **♪** schaltet separat die Effekte ein; Ton ist zunächst aus.
+hat Vorrang. **♪** schaltet separat die Effekte ein. Retro, Sounds, Stimmen und
+Animationen sind beim ersten Start aktiv; gespeicherte Einstellungen gelten weiter.
+Aktive Schalter leuchten ICQ-grün.
 In beiden Layouts spielen 45 Originalvarianten aus sechs Symbolgruppen die
-passenden Treffer, ergänzt um einen Ketteneffekt und zehn Lama-Stimmen.
+passenden Treffer, ergänzt um einen Ketteneffekt, zehn Lama-Stimmen und fünf
+Effekte für Steinbewegungen und Bruch. Lamawechsel spielen aus eigener Sicht
+`transhappy` bei Zugewinn und `transpissed` bei Verlust, auch bei mehreren Lamas.
+Neue fremde
+Chatnachrichten spielen den klassischen ICQ-„Uh-oh“-Ton.
 **Stimmen** schaltet die positiven bzw. verärgerten Reaktionen bei eigenen
 Lama-Gewinnen/-Verlusten separat ab. Sound und Animationen funktionieren
-unabhängig voneinander. Die Auswahl wird lokal gespeichert; beide Spieler
+unabhängig voneinander. Zuganimationen laufen mit halber Geschwindigkeit;
+der Server wartet bis zum Ende der Stein- und Lama-Bewegungen. Neue Züge
+schneiden laufende Originalsounds nicht ab. Die Auswahl wird lokal gespeichert; beide Spieler
 wählen unabhängig voneinander.
 
 Bildquellen, Gameplay-Videos, Extraktion und Zuordnung der Medien:
