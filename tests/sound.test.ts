@@ -30,6 +30,26 @@ test('Lama reactions depend on gaining or losing a follower, with no voice on un
   }
   assert.ok(!turnSounds(last, [0, 0], [20, 0], 0).some(c => c.kind === 'voice'));
 });
+
+test('Combo accents follow the hit, finish before the next cascade and postpone the transfer gate', () => {
+  const game = newGame(); game.board = empty();
+  game.board[4] = ['cherry', 'cherry', null, 'lemon', 'lemon']; game.board[3][2] = 'lemon'; game.queue[0] = 'cherry';
+  const last = play(game, 0, { side: 'left', lane: 4 }).lastMove!;
+  last.frames.push({ ...last.frames[1], multiplier: 3 });
+  const step = FEEDBACK_TIMING.burst + FEEDBACK_TIMING.fall;
+  assert.equal(boardMotionMs(last), FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity + 3 * step + 2 * FEEDBACK_TIMING.comboHold);
+  for (const animated of [true, false]) {
+    const cues = turnSounds(last, [50, 0], [80, 0], 0, animated);
+    const combos = cues.filter(cue => cue.kind === 'combo');
+    assert.equal(combos.length, 2);
+    for (const [index, combo] of combos.entries()) {
+      const hit = cues.find(cue => cue.kind === 'match' && cue.multiplier === index + 2)!;
+      assert.equal(combo.delay - hit.delay, FEEDBACK_TIMING.comboDelay);
+      const following = index === 0 ? cues.find(cue => cue.kind === 'match' && cue.multiplier === 3)! : cues.find(cue => cue.kind === 'voice')!;
+      assert.ok(following.delay >= combo.delay + 1430, 'Original combo sample must finish before the next cascade or transfer');
+    }
+  }
+});
 test('Crossed lines of the same symbol use one matching sound and all sound banks rotate without repeats', () => {
   const random = new SoundVariants(() => 0);
   for (const [tile, files] of Object.entries(MATCH_SOUNDS)) {

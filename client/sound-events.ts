@@ -26,20 +26,22 @@ export function turnSounds(last: NonNullable<Game['lastMove']>, before: [number,
     }
     if (side === 'top' || hasFallingStones(push(previous, last.tile, last.move))) cues.push({ kind: 'stone', action: 'drop', delay: at(lead + FEEDBACK_TIMING.insert + (side === 'top' && full ? 0 : FEEDBACK_TIMING.gravity)) });
   }
-  for (const [index, frame] of last.frames.entries()) {
-    cues.push({ kind: 'stone', action: 'shatter', delay: at(start + index * step) });
+  let frameAt = start;
+  for (const frame of last.frames) {
+    cues.push({ kind: 'stone', action: 'shatter', delay: frameAt });
     const kinds = new Map<Tile, number>();
     for (const match of findMatches(frame.board)) kinds.set(match.tile, Math.max(kinds.get(match.tile) ?? 0, match.cells.length));
     let simultaneous = 0;
-    for (const [tile, length] of kinds) cues.push({ kind: 'match', tile, length, multiplier: frame.multiplier, delay: start + index * step + simultaneous++ * 90 });
-    if (index === 1) cues.push({ kind: 'combo', delay: start + index * step });
+    for (const [tile, length] of kinds) cues.push({ kind: 'match', tile, length, multiplier: frame.multiplier, delay: frameAt + simultaneous++ * 90 });
+    if (frame.multiplier > 1) cues.push({ kind: 'combo', delay: frameAt + FEEDBACK_TIMING.comboDelay });
     const cleared = cloneBoard(frame.board);
     for (const [r, c] of frame.matches) cleared[r][c] = null;
-    if (hasFallingStones(cleared)) cues.push({ kind: 'stone', action: 'drop', delay: at(start + index * step + FEEDBACK_TIMING.burst + FEEDBACK_TIMING.fall) });
+    if (hasFallingStones(cleared)) cues.push({ kind: 'stone', action: 'drop', delay: frameAt + step });
+    frameAt += step + (frame.multiplier > 1 ? FEEDBACK_TIMING.comboHold : 0);
   }
   const delta = lamaCounts(after)[you] - lamaCounts(before)[you];
   if (delta !== 0) {
-    const transferAt = animated ? boardMotionMs(last, previous) : 0;
+    const transferAt = animated ? boardMotionMs(last, previous) : last.frames.some(frame => frame.multiplier > 1) ? frameAt : 0;
     cues.push({ kind: 'voice', mood: delta > 0 ? 'happy' : 'angry', delay: transferAt });
   }
   const mechanical = new Set<string>();

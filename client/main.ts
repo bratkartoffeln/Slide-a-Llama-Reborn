@@ -53,9 +53,9 @@ app.innerHTML = `
       <div class="retro-game-caption" aria-hidden="true">SLIDE-A-LLAMA <small>CLASSIC FRUITS</small></div><div class="player-row"><div class="player player-zero" id="player-0"></div><div class="versus">VS</div><div class="player player-one" id="player-1"></div></div>
       <div class="turn-line"><span id="turn-label">Ein kleines Duell wartet auf dich.</span><span class="timer" id="timer">30<span>s</span></span></div><div class="timer-track"><span id="timer-fill"></span></div>
       <div class="temple-stage"><div class="board-scene"><img class="retro-temple" src="/retro/temple.png" alt="" draggable="false"/><div class="temple-top"><span>◆</span><i></i><span>◆</span></div><div class="board-controls" id="board-controls"></div><div class="board-effects" id="board-effects" aria-hidden="true"></div><div class="board-overlay" id="board-overlay"><span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere Paco heraus.</p></div></div>
-      <div class="tile-queue"><div class="wheel-window"><div class="queue-wheel" id="queue-wheel" role="group" aria-label="Stein-Drehrad, der kommende Stein steht unten"><div class="wheel-plate" aria-hidden="true"><i></i><b>&#9670;</b></div><div class="current-tile"><span>JETZT</span><div id="current-tile"></div></div><div class="next-tiles"><span>DANACH</span><div id="next-tiles"></div></div></div></div><div class="queue-hint" id="queue-hint">Einsetzen.<br/><strong>Überraschen.</strong></div></div>
-      </div><div class="move-feedback" id="move-feedback" aria-live="polite">Drei gleiche Früchte. Ein ziemlich guter Anfang.</div>
+      <div class="tile-queue"><div class="wheel-window"><div class="queue-wheel" id="queue-wheel" role="group" aria-label="Stein-Drehrad, der kommende Stein steht links unten, danach aufwärts"><div class="wheel-plate" aria-hidden="true"><i></i><b>&#9670;</b></div><div class="current-tile"><span>JETZT</span><div id="current-tile"></div></div><div class="next-tiles"><span>DANACH</span><div id="next-tiles"></div></div></div></div><div class="queue-hint" id="queue-hint">Einsetzen.<br/><strong>Überraschen.</strong></div></div>
       <div class="herd"><div class="herd-top"><span>DEINE LAMAS <b id="lamas-0">5</b></span><span><b id="lamas-1">5</b> GEGENSEITE</span></div><div id="herd-llamas" class="herd-llamas"></div><div class="lead-track"><span id="lead-fill"></span><i></i></div><p id="herd-caption">60 Punkte Vorsprung = ein Lama für dich.</p></div>
+      </div><div class="move-feedback" id="move-feedback" aria-live="polite">Drei gleiche Früchte. Ein ziemlich guter Anfang.</div>
       <div id="result" class="result" role="dialog" aria-modal="true" aria-labelledby="result-heading" hidden></div>
       <button id="resign" class="text-button resign" hidden>Partie aufgeben</button>
     </section>
@@ -299,13 +299,20 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
     if (generation !== animationGeneration) return;
     renderBoard(frame.board, frame.matches);
     boardFeedback.burst(frame, snapshot.game.lastMove!.seat === snapshot.you);
-    $('move-feedback').textContent = `+${frame.points} Punkte${frame.multiplier > 1 ? ` · Kaskade ×${frame.multiplier}!` : ' · Gute Kombination!'}`;
+    $('move-feedback').textContent = `+${frame.points} Punkte${frame.multiplier > 1 ? '' : ' · Gute Kombination!'}`;
     await new Promise(r => setTimeout(r, FEEDBACK_TIMING.burst));
     if (generation !== animationGeneration) return;
     const cleared = cloneBoard(frame.board);
     for (const [r, c] of frame.matches) cleared[r][c] = null;
     const settled = cloneBoard(cleared); gravity(settled); renderBoard(settled); fallingPieces(cleared, 200);
     await new Promise(r => setTimeout(r, FEEDBACK_TIMING.fall));
+    if (frame.multiplier > 1) {
+      const remainingDelay = FEEDBACK_TIMING.comboDelay - FEEDBACK_TIMING.burst - FEEDBACK_TIMING.fall;
+      await new Promise(r => setTimeout(r, remainingDelay));
+      if (generation !== animationGeneration) return;
+      $('move-feedback').textContent = `+${frame.points} Punkte · Kaskade ×${frame.multiplier}!`;
+      await new Promise(r => setTimeout(r, FEEDBACK_TIMING.comboHold - remainingDelay));
+    }
   }
   if (generation !== animationGeneration) return;
   renderBoard(snapshot.game.board); renderHerd(lamaCounts([snapshot.game.scores[0] - (last.seat === 0 ? last.points : 0), snapshot.game.scores[1] - (last.seat === 1 ? last.points : 0)]));

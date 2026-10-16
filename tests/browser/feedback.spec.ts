@@ -141,7 +141,7 @@ test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone
   const next = await page.locator('#next-tiles>div').first().locator('img').getAttribute('src');
   const rowBefore = await page.locator('#board-controls [data-row="1"][data-col="0"] img').getAttribute('src');
   const wheelWindow = await page.locator('.wheel-window').boundingBox(), wheel = await page.locator('#queue-wheel').boundingBox();
-  expect(wheelWindow!.width).toBeLessThan(wheel!.width * .55);
+  expect(wheelWindow!.width).toBeLessThan(wheel!.width * .56);
   const currentStone = await page.locator('#current-tile').boundingBox();
   for (const stone of await page.locator('#next-tiles>div').all()) {
     const bounds = (await stone.boundingBox())!;

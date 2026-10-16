@@ -132,7 +132,10 @@ Kennung aus Raum, Runde und Revision verhindert doppelte Zugwiedergabe.
 Der separat ergänzte ICQ-Chatton `public/audio/icq-uh-oh.mp3` stammt von
 [Myinstants – ICQ Uh Oh](https://www.myinstants.com/es/instant/icq-uh-oh-46540/),
 [MP3-Datei](https://www.myinstants.com/media/sounds/icq-uh-oh.mp3), abgerufen am
-16.10.2026. Die lokale Fassung ist als MP3 eingebunden. Er spielt bei neuen fremden
+16.10.2026. Die lokale Fassung ist als MP3 eingebunden. Ein stummer Vorlauf von
+220 ms lässt der Audioausgabe Zeit zum Anlaufen, damit die kurze erste Silbe
+nicht verschluckt wird. Beide Lautteile bleiben vollständig erhalten; die
+Wiedergabe verwendet keine Einblendung. Er spielt bei neuen fremden
 Nachrichten, nicht bei eigenen Nachrichten oder beim Laden des Verlaufs.
 Die bestehende Einschränkung zur nicht bestätigten freien Lizenz gilt auch hier.
 

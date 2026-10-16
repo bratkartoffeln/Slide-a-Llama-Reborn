@@ -18,9 +18,8 @@ body[data-theme=retro] .tile .retro-art{mix-blend-mode:multiply;object-fit:conta
 .tile.preview,body[data-theme=retro] .tile.preview{background:none;box-shadow:none;filter:drop-shadow(0 0 3px #ffe19a)}
 .tile.empty,body[data-theme=retro] .tile.empty{background:none;border:0;box-shadow:none;filter:none;opacity:.34}
 .tile.empty:before{display:none}.tile.empty:after{background:#af9a6b35;box-shadow:inset 1px 2px 5px #65522c55}
-.tile.matched,body[data-theme=retro] .tile.matched{background:none;animation:stone-vanish .36s ease-in both}
-.tile.matched:after{inset:0;border:0;border-radius:0;animation:none}
-@keyframes stone-vanish{0%{opacity:1;transform:scale(1)}30%{opacity:1;transform:scale(1.04)}100%{opacity:0;transform:scale(.88)}}
+/* Fragments replace the intact stone immediately, while its grid slot stays put. */
+#board-controls>.tile.matched{visibility:hidden;animation:none;transition:none}
 .board-effects{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:clip}
 .stone-fragment{position:absolute;display:block;pointer-events:none;will-change:transform,opacity}
 .stone-shockwave{position:absolute;pointer-events:none;border:3px solid #fff5c8;border-radius:50%;background:radial-gradient(circle,#fff9dbaa 0, #ffd56d55 25%,transparent 65%);box-shadow:0 0 15px #ffbd4388,inset 0 0 18px #fff3c3;mix-blend-mode:screen}
@@ -49,7 +48,7 @@ body[data-theme=retro] .voices-toggle{font-size:10px;padding:7px}
 @media(prefers-reduced-motion:reduce){.board-effects{display:none}}
 body.motion-off .board-effects{display:none}
 
-/* Four stone pockets; the next stone to insert is enlarged at the bottom. */
+/* Four stone pockets along the visible arc, with the enlarged next stone first. */
 .tile-queue,body[data-theme=retro] .tile-queue{display:flex;justify-content:center;align-items:center;gap:20px;padding:16px 8px 0;margin:0;background:none;border:0}
 .queue-wheel{position:relative;flex:none;width:174px;height:174px;transform-origin:center}
 .wheel-plate{position:absolute;inset:17px;border-radius:50%;background:repeating-conic-gradient(from 12deg,#8e714f55 0deg 2deg,transparent 2deg 30deg),radial-gradient(circle,#ad8b58 0 13%,#f3deb0 14% 19%,#c7aa71 20% 55%,#e9d2a0 56% 66%,#9a7c50 67% 71%,#e4c78b 72%);border:4px solid #b49762;box-shadow:inset 0 3px 4px #fff1c9,0 5px 0 #81643f,0 7px 7px #352b2726}
@@ -82,13 +81,21 @@ body[data-theme=retro] .wheel-plate{filter:saturate(1.4);border-color:#b79526}
 #theme-toggle[aria-pressed=true]:hover,#voices-toggle[aria-pressed=true]:hover,#sound[aria-pressed=true]:hover,#motion-toggle[aria-pressed=true]:hover{background:linear-gradient(#ecffcb,#bbed78)}
 
 .temple-stage{position:relative;padding-right:74px}
+.temple-stage .herd{margin-top:8px;padding-top:8px}
+body[data-theme=retro] .temple-stage .herd{position:relative;display:flex;flex-direction:column;margin-top:calc(-13.5% - 6px);padding:0;border:0}
+body[data-theme=retro] .temple-stage .herd-llamas{order:-1;margin:0}
+body[data-theme=retro] .temple-stage .herd .retro-follower{height:auto;aspect-ratio:100/135}
+body[data-theme=retro] .temple-stage .herd-top{margin-top:5px}
+body[data-theme=retro] .temple-stage .lead-track{margin-top:4px}
+.arena>.move-feedback,body[data-theme=retro] .arena>.move-feedback{min-height:20px;padding:5px 5px 0}
 .temple-stage .tile-queue,body[data-theme=retro] .temple-stage .tile-queue{position:absolute;right:-8px;top:36px;width:88px;padding:0;margin:0;display:block;border:0;background:none}
-.wheel-window{width:88px;height:204px;overflow:hidden}
+.wheel-window{width:96px;height:204px;padding-left:8px;margin-left:-8px;overflow:hidden}
 .queue-wheel{margin-top:15px}
-.queue-wheel .current-tile{left:60px;top:auto;bottom:0}
+.queue-wheel .current-tile{left:17px;top:98px;bottom:auto}
+.queue-wheel .current-tile>span{left:calc(100% + 6px);top:50%;transform:translateY(-50%)}
 .queue-wheel .next-tiles>span{display:none}
-.queue-wheel #next-tiles>div:nth-child(1){left:0;right:auto;top:105px;transform:none}
-.queue-wheel #next-tiles>div:nth-child(2){left:0;bottom:auto;top:45px;transform:none}
+.queue-wheel #next-tiles>div:nth-child(1){left:-8px;right:auto;top:64px;transform:none}
+.queue-wheel #next-tiles>div:nth-child(2){left:6px;bottom:auto;top:24px;transform:none}
 .queue-wheel #next-tiles>div:nth-child(3){left:40px;bottom:auto;top:0;transform:none}
 .temple-stage .queue-hint{display:none}
 .waiting-stone{position:absolute;z-index:8;pointer-events:none}.waiting-stone>.tile{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
