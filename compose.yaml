@@ -1,0 +1,13 @@
+name: slide-a-lama
+services:
+  game:
+    build: .
+    init: true
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "2568"
+      ALLOWED_ORIGINS: "${SLIDE_ALLOWED_ORIGINS:-}"
+    ports:
+      - "${SLIDE_LAN_BIND:-0.0.0.0}:${SLIDE_PORT:-2568}:2568/tcp"

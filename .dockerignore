@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.github
+.vscode
+.env
+.env.*
+!.env.example
+secrets
+**/secrets
+*.zip
+*.log
+work
+outputs
+.nas-update.lock
