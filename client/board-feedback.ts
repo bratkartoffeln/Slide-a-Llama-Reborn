@@ -1,5 +1,5 @@
 import { fruit } from './art';
-import type { Board, Frame, Move } from '../shared/game';
+import { findMatches, type Board, type Frame, type Move } from '../shared/game';
 import { FEEDBACK_TIMING, sideEjectImpactMs } from '../shared/feedback';
 
 /** A bounded overlay keeps transient fragments and score labels out of the game grid. */
@@ -16,6 +16,7 @@ export class BoardFeedback {
     this.animations.clear(); this.layer.replaceChildren();
     this.scene.querySelectorAll('.stone-cracks').forEach(element => element.remove());
     this.scene.querySelectorAll('.cracking').forEach(element => element.classList.remove('cracking'));
+    this.scene.querySelectorAll('.match-announcement').forEach(element => element.remove());
     delete this.scene.dataset.motionPhase;
   }
   crackBottom(board: Board, lane: number, tile: NonNullable<Board[number][number]>) {
@@ -31,6 +32,33 @@ export class BoardFeedback {
   }
   releaseWaitingStone() {
     this.layer.querySelectorAll('.waiting-stone').forEach(element => element.remove());
+  }
+  async blinkMatches(frame: Frame) {
+    if (!this.enabled()) return;
+    await Promise.all(frame.matches.map(([row, col]) => {
+      const tile = this.scene.querySelector<HTMLElement>(`#board-controls [data-row="${row}"][data-col="${col}"]`)!;
+      const animation = tile.animate([{ opacity: 1 }, { opacity: .08, offset: .5 }, { opacity: 1 }], {
+        duration: FEEDBACK_TIMING.matchBlink / 3, iterations: 3, easing: 'steps(1,end)'
+      });
+      this.animations.add(animation);
+      return animation.finished.catch(() => {}).finally(() => this.animations.delete(animation));
+    }));
+  }
+  announceMatch(frame: Frame) {
+    if (!this.enabled()) return;
+    // Crossing triples are still triples, even if their union contains five cells.
+    const length = Math.max(...findMatches(frame.board).map(match => match.cells.length));
+    const word = length === 5 ? 'Five' : length === 4 ? 'Four' : 'Three';
+    const label = document.createElement('span'); label.className = 'match-announcement';
+    label.dataset.length = String(length); label.setAttribute('role', 'img'); label.setAttribute('aria-label', `${word} of a Kind`);
+    label.innerHTML = `<img src="/retro/${word.toLowerCase()}-of-a-kind.png" alt="" draggable="false"/>`;
+    this.scene.append(label);
+    this.animate(label, [
+      { transform: 'translate(-50%,-160%) scale(.65)', opacity: 0 },
+      { transform: 'translate(-50%,0) scale(1.08)', opacity: 1, offset: .22 },
+      { transform: 'translate(-50%,0) scale(1)', opacity: 1, offset: .75 },
+      { transform: 'translate(-50%,-35%) scale(1.05)', opacity: 0 }
+    ], FEEDBACK_TIMING.matchTitle + FEEDBACK_TIMING.burst + FEEDBACK_TIMING.fall);
   }
   async eject(board: Board, move: Move) {
     if (!this.enabled()) return;

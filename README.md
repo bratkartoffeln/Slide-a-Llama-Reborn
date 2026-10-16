@@ -1,6 +1,6 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.10** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.11** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
 Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
@@ -87,6 +87,22 @@ Beim Zersplittern ersetzen die Bruchstücke sofort den ursprünglichen Stein.
 Die Tempelsäulen liegen vor den Spielsteinen. Seitlich herausgeschobene Steine
 kippen über die Kante, fallen zum Tempelfuß und zerplatzen erst beim Aufprall.
 Aufprallgeräusche und Freigabe des nächsten Zugs folgen derselben Zeitleiste.
+Erkannte Treffer starten mit dem Originaldonner und dreimaligem Blinken nur der
+betroffenen Steine. Danach erscheint der originale Schriftzug „Three of a Kind“,
+„Four of a Kind“ oder „Five of a Kind“, bevor die Steine zerspringen.
+Bei sich kreuzenden Treffern zählt für den Schriftzug die längste einzelne Reihe.
+Der Countdown mit Team-Pfeil steht ohne eigene Fläche direkt im grauen Tempelfeld.
+Die Säulen sind verbreitert und lassen sämtliche Steine im 5×5-Feld frei.
+Schwingende Einschubsteine bleiben hinter den Säulen. Auf dem Desktop wählen
+auch die äußeren Spielfeldzellen den nächsten Rand-Slot; die Mitte und gleich
+weit entfernte Randübergänge bleiben neutral. Die Randpfeile bleiben unsichtbar,
+auf Touch-Geräten sind ihre quadratischen Flächen so groß wie ein Stein.
+Die Punktefenster zeigen wie im Original nur Spielernamen und vierstelligen
+Punktestand. Zusätzliche Hinweiszeilen auf der Bühne und „JETZT“ am Rad entfallen.
+Die Lamas sammeln sich in leicht versetzten Gruppen links bzw. rechts der Mitte;
+bei einem Seitenwechsel ändert sich die Farbe erst beim Überqueren der Mitte.
+Originalgeräusche ergänzen das Nachsetzen nach einem Treffer und die Jubel- bzw.
+Verlustreaktion beim Ergebnis-Overlay. Sie folgen ebenfalls dem SFX-Schalter.
 
 **✦** schaltet Einschub-, Bruch-, Punkte-, Fall-, Trefferketten-, Lamawechsel- und Sieganimationen
 an oder aus. Ausschalten beendet laufende Animationen sofort; der endgültige

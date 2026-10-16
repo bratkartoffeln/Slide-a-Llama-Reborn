@@ -104,3 +104,28 @@ test('Idle originals stay out of active turns and respect voice and sound switch
     if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument); else Reflect.deleteProperty(globalThis, 'document');
   }
 });
+
+test('Result overlays use original victory and defeat voices and obey SFX mute', async () => {
+  const samples: FakeAudio[] = [];
+  class FakeAudio extends EventTarget {
+    volume = 1; currentTime = 0;
+    constructor(public src: string) { super(); samples.push(this); }
+    play() { return Promise.resolve(); }
+    pause() {}
+  }
+  const originalAudio = Object.getOwnPropertyDescriptor(globalThis, 'Audio'), originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  Object.defineProperty(globalThis, 'Audio', { configurable: true, value: FakeAudio });
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { hidden: false } });
+  const audio = new GameAudio();
+  try {
+    audio.playResult(true); assert.equal(samples.length, 0);
+    audio.setEnabled(true); audio.playResult(true); assert.match(samples[0].src, /lama-victory\.mp3$/);
+    audio.playResult(false); assert.equal(samples.length, 1);
+    samples[0].dispatchEvent(new Event('ended')); assert.match(samples[1].src, /lama-defeat\.mp3$/);
+    audio.setEnabled(false); audio.playResult(false); assert.equal(samples.length, 2);
+  } finally {
+    audio.cancel();
+    if (originalAudio) Object.defineProperty(globalThis, 'Audio', originalAudio); else Reflect.deleteProperty(globalThis, 'Audio');
+    if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument); else Reflect.deleteProperty(globalThis, 'document');
+  }
+});

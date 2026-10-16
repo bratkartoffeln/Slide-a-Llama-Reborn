@@ -14,11 +14,13 @@ export const LAMA_SOUNDS = {
 export const COMBO_SOUND = '/audio/retro-combo.mp3';
 export const IDLE_LAMA_SOUNDS = Array.from({ length: 9 }, (_, i) => `/audio/original/lama-idle-${i + 1}.mp3`);
 export const MUSIC_SOUND = '/audio/original/background-music.mp3';
+export const THUNDER_SOUND = '/audio/original/match-thunder.wav';
+export const RESULT_SOUNDS = { won: '/audio/original/lama-victory.mp3', lost: '/audio/original/lama-defeat.mp3' } as const;
 export const STONE_SOUNDS = {
   slide: '/audio/original/stone-slide.mp3', drop: '/audio/reference/stone-drop-original.mp3',
   squeeze: '/audio/original/stone-squeeze.mp3', burst: '/audio/original/stone-burst.mp3',
-  shatter: '/audio/original/stone-shatter.mp3'
+  shatter: '/audio/original/stone-shatter.mp3', settle: '/audio/original/stones-settle.mp3'
 } as const;
-export const ORIGINAL_SOUND_FILES = [...Object.values(MATCH_SOUNDS).flat(), ...LAMA_SOUNDS.happy, ...LAMA_SOUNDS.angry, COMBO_SOUND, ...Object.values(STONE_SOUNDS), ...IDLE_LAMA_SOUNDS];
+export const ORIGINAL_SOUND_FILES = [...Object.values(MATCH_SOUNDS).flat(), ...LAMA_SOUNDS.happy, ...LAMA_SOUNDS.angry, COMBO_SOUND, ...Object.values(STONE_SOUNDS), ...IDLE_LAMA_SOUNDS, THUNDER_SOUND, ...Object.values(RESULT_SOUNDS)];
 export const CHAT_SOUND = '/audio/icq-uh-oh.mp3';
 export const SOUND_FILES = [...ORIGINAL_SOUND_FILES, CHAT_SOUND, MUSIC_SOUND];

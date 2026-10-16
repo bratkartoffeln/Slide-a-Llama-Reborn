@@ -96,7 +96,7 @@ test('Theme and motion preferences persist, and disabling animations settles an 
       return await Promise.all(files.map(async file => {
         const response = await fetch(file);
         const buffer = await context.decodeAudioData(await response.arrayBuffer());
-        return response.headers.get('content-type') === 'audio/mpeg' && buffer.duration > 0;
+        return response.headers.get('content-type') === (file.endsWith('.wav') ? 'audio/wav' : 'audio/mpeg') && buffer.duration > 0;
       }));
     } finally { await context.close(); }
   }, SOUND_FILES);

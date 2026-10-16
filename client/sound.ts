@@ -1,5 +1,5 @@
 import type { Board, Game, Seat } from '../shared/game';
-import { MATCH_SOUNDS, LAMA_SOUNDS, COMBO_SOUND, STONE_SOUNDS, CHAT_SOUND, IDLE_LAMA_SOUNDS, MUSIC_SOUND } from './audio-catalog';
+import { MATCH_SOUNDS, LAMA_SOUNDS, COMBO_SOUND, STONE_SOUNDS, CHAT_SOUND, IDLE_LAMA_SOUNDS, MUSIC_SOUND, THUNDER_SOUND, RESULT_SOUNDS } from './audio-catalog';
 import { SoundVariants, turnSounds, type TurnSound } from './sound-events';
 
 type Cue = 'move' | 'match' | 'combo' | 'win' | 'chat';
@@ -38,6 +38,10 @@ export class GameAudio {
   enabled = false;
   voicesEnabled = true;
   playChat() { if (this.enabled) { this.stopIdle(); this.original(CHAT_SOUND, 'chat', .5, 'chat'); } }
+  playResult(won: boolean) {
+    if (!this.enabled || document.hidden) return;
+    this.stopIdle(); this.original(RESULT_SOUNDS[won ? 'won' : 'lost'], 'voice', .35, won ? 'win' : 'chat');
+  }
   playIdleLama(): boolean {
     if (!this.enabled || !this.voicesEnabled || document.hidden || this.samples.size || this.queue.length || this.timers.size || Date.now() - this.lastActivity < 10000) return false;
     this.original(this.variants.next('idle', IDLE_LAMA_SOUNDS), 'idle', .22, 'chat');
@@ -78,7 +82,8 @@ export class GameAudio {
     }
   }
   private emit(cue: TurnSound) {
-    if (cue.kind === 'stone') { this.original(STONE_SOUNDS[cue.action], 'stone', .42, 'move'); return; }
+    if (cue.kind === 'thunder') { this.original(THUNDER_SOUND, 'accent', .35, 'move'); return; }
+    if (cue.kind === 'stone') { this.original(STONE_SOUNDS[cue.action], 'stone', cue.action === 'settle' ? .2 : .42, 'move'); return; }
     if (cue.kind === 'voice') {
       if (this.voicesEnabled) this.original(this.variants.next('voice-' + cue.mood, LAMA_SOUNDS[cue.mood]), 'voice', .4, 'chat');
     } else if (cue.kind === 'combo') this.original(COMBO_SOUND, 'accent', .24, 'combo');

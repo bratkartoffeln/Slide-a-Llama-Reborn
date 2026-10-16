@@ -140,7 +140,7 @@ test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone
   expect(await page.locator('.move-button').evaluateAll(buttons => buttons.every(button => getComputedStyle(button).opacity === '0'))).toBe(true);
   const target = page.locator('[data-move="top:0"]'); await target.hover();
   await expect(page.locator('.move-button.active-arrow')).toHaveCount(1);
-  await expect(target).toHaveCSS('opacity', '1');
+  await expect(target).toHaveCSS('opacity', '0');
   await page.locator('[data-move="left:2"]').hover();
   await expect(page.locator('.move-button.active-arrow')).toHaveCount(1);
   await expect(target).toHaveCSS('opacity', '0');

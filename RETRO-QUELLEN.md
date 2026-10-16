@@ -42,6 +42,60 @@ Dateien wurden unverändert übernommen; Skalierung und Darstellung erfolgen im 
 Die Figur wird per SVG-Ausschnitt angezeigt. Nur die blaue Kleidung wird für
 Team 0 im Browser rot eingefärbt. Die Gesichtsfarben bleiben erhalten.
 
+### Trefferfolge und Originalschrift für 0.1.11
+
+Der oben verlinkte Walkthrough wurde bei 01:10–01:14 mit fünf Bildern pro Sekunde
+erneut ausgewertet: Die getroffenen Pflaumen werden hervorgehoben, dann fallen
+einzelne Buchstaben von oben herein. „THREE OF A KIND“ steht groß und cremefarben
+mit dunkler Kontur und versetztem Schatten über dem Feld; erst danach zerbrechen
+die Steine. Die Neuauflage ergänzt wie angefordert drei klar getrennte Blinkzyklen
+(insgesamt 1200 ms), gefolgt von 1000 ms Schriftanzeige vor dem Bruch.
+
+`three-of-a-kind.png`, `four-of-a-kind.png` und `five-of-a-kind.png` sind unveränderte
+PNG-Exporte von Sprite 1160, Frames 4, 9 und 12. Damit wird die Originalschrift
+einschließlich ihrer Kontur und Schatten verwendet; der komplette Schriftzug
+fliegt gemeinsam herein. Im Original steuert Sprite 1174 einzelne Buchstaben.
+
+`audio/original/match-thunder.wav` ist Sound-Tag 915: Sprite 917 startet ihn in
+Frame 43 gleichzeitig mit `goCombo` für die getroffenen Steine. Der exportierte
+ADPCM-SWF-Ton (`915.flv`, Mono, 5512 Hz) wurde ohne Schnitt oder Fade in
+PCM-WAV decodiert und für Browserkompatibilität auf 22050 Hz umgerechnet.
+Er beginnt bei jeder erkannten Kaskade, vor Symbolstimme und
+Bruch, und läuft vollständig aus. SFX schaltet ihn zusammen mit den übrigen
+Effekten. Der Kaskadenfaktor behält seinen separaten, späteren Combo-Ton.
+Mit dem Donner umfasst der Originaleffekt-Katalog jetzt 75 Dateien.
+
+### Ergänzender Sound-Abgleich und Bühne für 0.1.11
+
+Alle übrigen exportierten Sound-Tags wurden mit ihren `StartSound`-Aufrufen und
+Frame-Labels im Original-XML abgeglichen. Zusätzlich eingebunden sind unveränderte
+MP3-Exporte:
+
+| Datei | Sound-Tag / Originalaufruf | Verwendung im Nachbau |
+| --- | --- | --- |
+| `original/stones-settle.mp3` | 916, Sprite 917 Frame 121, `endKilling` | Leiser Ausklang nach dem Zerfall einer Trefferkaskade; einmal je Zug |
+| `original/lama-victory.mp3` | 600, Sprite 690 Frame 1027, `happy2loop` | Original-Jubel beim erstmals angezeigten Gewinn-Overlay |
+| `original/lama-defeat.mp3` | 1237, Sprite 1240 Frames 74/131, `startLose` | Beginn der Verliererreaktion beim erstmals angezeigten Verlust-Overlay |
+
+Der Effektkatalog umfasst damit 78 Originaldateien, zusätzlich zum ICQ-Chatton
+und der Originalmusik. Ergebnisstimmen beginnen erst nach den Zuganimationen;
+Reconnects und wiederholte Snapshots lösen sie nicht erneut aus.
+
+Die ebenfalls gefundenen Ansagen 1142/1152/1156 für Drei-/Vier-/Fünferhände
+gehören zum Poker-Ablauf: Sprite 1160 stoppt in den Frames 4/9/12 bei `fruitMode`,
+bevor die Sound-Frames 5/10/13 erreicht werden. Das Früchtespiel verwendet dort
+seine bereits eingebundenen Fruchtvarianten. Weitere ungenutzte Tags gehören zu
+Pokerhänden, Vorhang-/Bühnen- und Nebenanimationen (u. a. Sprites 219, 708, 740,
+743, 778, 1043, 1069 und 1186). Sie werden nicht pauschal als zusätzliche
+Treffergeräusche abgespielt; Steinaufprall und Erschütterung besitzen bereits
+eigene Ereignisse und Originaleffekte.
+
+Die kompakte Namens-/Punkteanzeige wurde anhand derselben Videobildfolge
+abgeglichen: getrennte cremefarbene Namensfelder und dunkle vierstellige
+Zahlenfelder in den oberen Ecken. Die Tempelgrafik und ihre vorderen Säulen
+werden horizontal verbreitert, damit die Spielfeldsteine frei bleiben, während
+die Einschubvorschau hinter den Säulen liegt.
+
 ## Originaleffekte und Extraktion
 
 Quelle: die auf der Spielseite verlinkte
