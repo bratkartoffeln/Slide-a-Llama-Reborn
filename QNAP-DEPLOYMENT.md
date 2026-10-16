@@ -4,12 +4,12 @@
 
 Vorlage: `F:\Daten\DEV\Games\RPS-Online-reborn`, untersucht am 16.10.2026.
 Ziel: `F:\Daten\DEV\Games\Slide-a-Llama-Reborn`.
-Das Ziel enthielt nur README und lokale VS-Code-Einstellungen. Noch fehlen
-Anwendungscode, package.json, package-lock.json, Build und Tests. Die Dateien
-bereiten die Bereitstellung vor; ein erfolgreicher Spielbuild ist damit noch
-nicht bestätigt. Es gibt keine NAS-Verbindung und keinen Live-Porttest.
+Version 0.1.0 enthält Anwendungscode, Paketdateien, Build und Tests.
+Browserclient und WebSocket-Server werden gemeinsam unter `dist/` gebaut.
+Lokaler Build und Multiplayerprüfungen sind erfolgreich; Dockerbuild und
+Live-NAS-/Porttest sind auf diesem Arbeitsrechner noch nicht bestätigt.
 
-Der vorläufige Node-24-Dockerfile erwartet:
+Der Node-24-Dockerfile verwendet folgenden implementierten Vertrag:
 
 - `npm ci` funktioniert mit eingechecktem Lockfile.
 - `npm test` führt die tatsächlichen Anwendungstests aus.
@@ -20,11 +20,13 @@ Der vorläufige Node-24-Dockerfile erwartet:
   ein Start über TypeScript-Entwicklungstools funktioniert dort nicht.
 - Der Server beachtet `HOST=0.0.0.0` und `PORT=2568`, liefert HTTP `/ready` mit
   Status 200 erst bei Bereitschaft und unterstützt die gewünschten WebSockets.
-- Falls Origin-Einschränkungen gewünscht sind, muss der Server
-  `ALLOWED_ORIGINS` tatsächlich auswerten. Compose allein implementiert das nicht.
+- Der Server wertet `ALLOWED_ORIGINS` als kommaseparierte Origin-Liste aus.
+  Ohne Liste erlaubt er Browser-Verbindungen vom selben Host und native Clients
+  ohne Origin-Header. Bei gesetzter Liste muss der Origin enthalten sein.
 
 Vor einem anderen Technikstapel Dockerfile, Healthcheck und Proxyziel anpassen.
-Ein Platzhalterspiel oder fremder RPS-Code wurde nicht hinzugefügt.
+Der Früchte-Modus ist implementiert; Regeln und Abweichungen stehen in
+`SPIELREGELN.md`. Räume und Chat sind flüchtig: Neustarts beenden Partien.
 
 ## Getrennte Ressourcen
 
@@ -49,7 +51,7 @@ NAS-Dienste und Routerfreigaben ist vor Ort zu prüfen.
 
 ## Ersteinrichtung
 
-Erst den Anwendungsvertrag fertigstellen und Build/Tests prüfen. Danach in einer
+Erst Build/Tests und `npm run check:docker` prüfen. Danach in einer
 Administrations-SSH-Sitzung auf dem NAS einen **neuen** Ordner anlegen:
 
 ```sh
@@ -147,8 +149,8 @@ eingecheckt und gepusht wurden. Er prüft Paketvoraussetzungen, baut Spiel und
 DNS-Proxy und stellt ein Quellpaket des gewählten Commits als Artifact bereit.
 Der NAS-Build erfolgt anschließend lokal mit dem Update-Skript. Das Archiv
 enthält die versionierten Dateien; `.env` und `secrets/` niemals einchecken.
-Der Workflow ist absichtlich nur manuell ausführbar und meldet bis zum
-Vorliegen der Anwendung einen Fehler statt einer angeblich fertigen Version.
+Dieser Paketworkflow ist nur manuell ausführbar. Zusätzlich prüft `verify.yml`
+bei Push und PR Regeln, WebSocket-Multiplayer, Browserbedienung und Produktionsimage.
 
 Der RPS-Workflow `deploy-request.yml` wartet auf `qnap-manual`-Deployment-
 Bestätigungen eines alle fünf Minuten laufenden NAS-Pollers. Dessen Installation
@@ -171,8 +173,8 @@ meldete keine Whitespace-Fehler. Lokale VS-Code-Einstellungen blieben erhalten.
 
 Docker ist auf diesem Arbeitsrechner nicht verfügbar. Daher wurden weder
 `docker compose config` noch Imagebuild, Containerstart, Caddy-Validierung oder
-öffentliche DNS-/TLS-/WebSocket-Tests ausgeführt. Der Paketcheck schlägt wegen
-der fehlenden Anwendung erwartungsgemäß fehl. Die NAS-Befehle oben sind die
+öffentliche DNS-/TLS-/WebSocket-Tests ausgeführt. Der Paketcheck ist mit Version
+0.1.0 erfolgreich. Die NAS-Befehle oben sind die
 noch auszuführenden Schritte, keine bereits bestätigten Ergebnisse.
 
 ## Quellen und Vorlage

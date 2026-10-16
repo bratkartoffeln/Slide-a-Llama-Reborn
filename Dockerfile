@@ -1,4 +1,4 @@
-# Node contract, adapted from RPS. Application sources are not present yet.
+# Server and browser client share the package version and ship in one image.
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
