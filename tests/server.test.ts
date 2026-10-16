@@ -85,6 +85,7 @@ test('Expired reconnection ends the game, without allowing a stranger to take th
   const { a, b, welcome } = await pair(server.url); a.ws.terminate();
   const end = (await b.wait('snapshot', m => m.state.phase === 'finished')).state;
   assert.equal(end.game.winner, 1); assert.deepEqual(end.wins, [0, 1]);
+  assert.equal((await (await fetch(server.url + '/ready')).json()).rooms, 1);
   const stranger = await client(server.url); stranger.send({ type: 'resume', room: welcome.room, token: welcome.token }); await stranger.wait('error', m => !!m.terminal);
 });
 test('Server clock inserts a tile after timeout and practice bot takes its own turns', async t => {
@@ -113,4 +114,50 @@ test('Health exposes version only; origin checks and shutdown signaling work', a
   const { a, b } = await pair(server.url);
   await server.close(); await a.wait('shutdown'); await b.wait('shutdown');
   assert.ok(!a.messages.some(m => m.type === 'snapshot' && m.state.phase === 'finished'));
+});
+
+for (const mode of ['waiting', 'playing', 'finished', 'bot'] as const) {
+  test('Abandoned ' + mode + ' room expires after reconnect grace and unblocks deployment', async t => {
+    const server = await startServer({ port: 0, reconnectMs: 500 });
+    t.after(() => server.close());
+    let players: Awaited<ReturnType<typeof client>>[];
+    if (mode === 'playing' || mode === 'finished') {
+      const { a, b } = await pair(server.url);
+      players = [a, b];
+      if (mode === 'finished') {
+        a.send({ type: 'resign' });
+        await b.wait('snapshot', m => m.state.phase === 'finished');
+      }
+    } else {
+      const a = await client(server.url);
+      a.send({ type: 'create', name: 'Alex', bot: mode === 'bot' });
+      await a.wait('welcome');
+      players = [a];
+    }
+    for (const p of players) p.ws.terminate();
+    // The reconnect window still blocks deployment before cleanup.
+    assert.equal((await (await fetch(server.url + '/ready')).json()).rooms, 1);
+    assert.equal((await fetch(server.url + '/internal/maintenance/enter', { method: 'POST' })).status, 409);
+    const deadline = Date.now() + 3000;
+    while ((await (await fetch(server.url + '/ready')).json()).rooms !== 0) {
+      assert.ok(Date.now() < deadline, 'Abandoned room should expire without the 30-minute idle timeout');
+      await new Promise(r => setTimeout(r, 20));
+    }
+    assert.equal((await fetch(server.url + '/internal/maintenance/enter', { method: 'POST' })).status, 200);
+  });
+}
+
+test('The last disconnected human retains their full reconnect window after the other expires', async t => {
+  const server = await startServer({ port: 0, reconnectMs: 500 });
+  t.after(() => server.close());
+  const { a, b, welcome } = await pair(server.url);
+  const secondWelcome = await b.wait('welcome');
+  a.ws.terminate();
+  await b.wait('snapshot', m => m.state.phase === 'finished');
+  b.ws.terminate();
+  assert.equal((await (await fetch(server.url + '/ready')).json()).rooms, 1);
+  const resumed = await client(server.url);
+  resumed.send({ type: 'resume', room: welcome.room, token: secondWelcome.token });
+  await resumed.wait('welcome');
+  assert.equal((await (await fetch(server.url + '/ready')).json()).rooms, 1);
 });

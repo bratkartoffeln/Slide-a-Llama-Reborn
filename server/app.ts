@@ -210,9 +210,14 @@ export async function startServer(options: ServerOptions = {}) {
         const p = room.players[seat];
         if (p && !p.bot && p.reconnectUntil !== null && now >= p.reconnectUntil) {
           p.reconnectUntil = null; p.token = '';
-          if (room.phase === 'waiting') { rooms.delete(room.code); break; }
           if (room.phase === 'paused') finish(room, seat === 0 ? 1 : 0, `${p.name} ist nicht zurückgekehrt.`);
         }
+      }
+      // Bots do not keep abandoned rooms alive. Retain each human's reconnect
+      // window, including one that started after another player's expired.
+      if (room.players.every(p => !p || p.bot || (p.socket === null && p.reconnectUntil === null))) {
+        rooms.delete(room.code);
+        continue;
       }
       if (room.phase === 'playing' && connected(room) && now >= room.availableAt) {
         if (room.players[room.game.turn]?.bot && now >= room.botAt) move(room, room.game.turn, botMove(room.game));

@@ -4,7 +4,7 @@
 
 Vorlage: `F:\Daten\DEV\Games\RPS-Online-reborn`, untersucht am 16.10.2026.
 Ziel: `F:\Daten\DEV\Games\Slide-a-Llama-Reborn`.
-Version 0.1.6 enthält Anwendungscode, Paketdateien, Build und Tests.
+Version 0.1.7 enthält Anwendungscode, Paketdateien, Build und Tests.
 Browserclient und WebSocket-Server werden gemeinsam unter `dist/` gebaut.
 Lokaler Anwendungsbuild und Multiplayerprüfungen sind erfolgreich. Der Caddy-
 Imagebuild und die NAS-HTTPS-Prüfung der dynv6-Korrektur sind unten dokumentiert.

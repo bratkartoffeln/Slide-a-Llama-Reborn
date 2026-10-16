@@ -1,6 +1,6 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.6** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.7** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
 Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
@@ -109,6 +109,10 @@ abgewiesen. Private Räume haben zwei Plätze und einen achtstelligen Code.
 bei Abbruch, private Sitzungskennung in sessionStorage, vollständiger
 Spielstand nach Wiederkehr und eine ausdrückliche Meldung bei Serverneustart.
 Sitzungskennungen erscheinen weder im Link noch im Spielstand des Gegners.
+Räume ohne verbundene menschliche Spieler werden gelöscht, sobald alle
+Wiederverbindungsfristen abgelaufen sind (standardmäßig 120 Sekunden je Spieler).
+Das gilt auch für beendete Partien und Training mit Bot; solche Räume blockieren
+den NAS-Updater danach nicht mehr.
 
 Chat: 300 Unicode-Zeichen, 50 Nachrichten Verlauf, 500 ms Mindestabstand und
 Deduplizierung pro Spieler. Benutzertexte werden sicher als Text ausgegeben.
