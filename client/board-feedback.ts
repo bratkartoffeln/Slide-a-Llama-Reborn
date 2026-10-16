@@ -1,15 +1,17 @@
 import { fruit } from './art';
 import type { Board, Frame, Move } from '../shared/game';
-import { FEEDBACK_TIMING } from '../shared/feedback';
+import { FEEDBACK_TIMING, sideEjectImpactMs } from '../shared/feedback';
 
 /** A bounded overlay keeps transient fragments and score labels out of the game grid. */
 export class BoardFeedback {
   private animations = new Set<Animation>();
+  private generation = 0;
   async settle() {
     await Promise.all([...this.animations].map(animation => animation.finished.catch(() => {})));
   }
   constructor(private scene: HTMLElement, private layer: HTMLElement, private enabled: () => boolean) {}
   clear() {
+    this.generation++;
     for (const animation of this.animations) animation.cancel();
     this.animations.clear(); this.layer.replaceChildren();
     this.scene.querySelectorAll('.stone-cracks').forEach(element => element.remove());
@@ -30,23 +32,35 @@ export class BoardFeedback {
   releaseWaitingStone() {
     this.layer.querySelectorAll('.waiting-stone').forEach(element => element.remove());
   }
-  eject(board: Board, move: Move) {
+  async eject(board: Board, move: Move) {
     if (!this.enabled()) return;
     const { side, lane } = move;
-    const full = side === 'top' ? board.every(row => row[lane] !== null) : board[lane].every(cell => cell !== null);
-    if (!full) return;
-    const row = side === 'top' ? 4 : lane, col = side === 'top' ? lane : side === 'left' ? 4 : 0;
+    const impactAt = sideEjectImpactMs(board, move);
+    if (!impactAt) return;
+    const generation = this.generation;
+    const row = lane, col = side === 'left' ? 4 : 0;
     const source = this.scene.querySelector<HTMLElement>(`#board-controls [data-row="${row}"][data-col="${col}"]`)!;
     const bounds = this.scene.getBoundingClientRect(), rect = source.getBoundingClientRect();
     const piece = document.createElement('span'); piece.className = 'ejected-stone';
     Object.assign(piece.style, { left: rect.left - bounds.left + 'px', top: rect.top - bounds.top + 'px', width: rect.width + 'px', height: rect.height + 'px' });
     piece.innerHTML = source.outerHTML;
     this.layer.append(piece);
-    const dx = side === 'top' ? 0 : (side === 'left' ? 1 : -1) * rect.width;
-    const frames = side === 'top' ? [{ transform: 'scale(1)' }, { transform: 'scale(1.15,.3)', offset: .85 }, { transform: 'scale(1.2,.05)' }] : [{ transform: 'translateX(0)' }, { transform: `translateX(${dx}px) rotate(${dx > 0 ? 12 : -12}deg)` }];
-    this.animate(piece, frames, FEEDBACK_TIMING.insert, () => this.burst({ board, matches: [[row, col]], points: 0, multiplier: 1 }, true, false, dx));
+    const direction = side === 'left' ? 1 : -1;
+    const dx = direction * rect.width * 1.55;
+    const floor = bounds.height - 8, dy = Math.max(rect.height * .35, floor - (rect.top - bounds.top) - rect.height);
+    piece.dataset.phase = 'ejecting';
+    await this.animate(piece, [
+      { transform: 'translate(0,0) rotate(0deg)', easing: 'linear' },
+      { transform: `translate(${dx * .65}px,0) rotate(0deg)`, offset: FEEDBACK_TIMING.insert / impactAt, easing: 'ease-in' },
+      { transform: `translate(${dx}px,0) rotate(${direction * 18}deg)`, offset: (FEEDBACK_TIMING.insert + FEEDBACK_TIMING.ejectTip) / impactAt, easing: 'cubic-bezier(.55,0,1,.65)' },
+      { transform: `translate(${dx}px,${dy}px) rotate(${direction * 48}deg)` }
+    ], impactAt);
+    if (generation !== this.generation || !this.enabled()) return;
+    const current = this.scene.getBoundingClientRect();
+    this.burst({ board, matches: [[row, col]], points: 0, multiplier: 1 }, true, false, 0, { left: current.left + rect.left - bounds.left + dx, top: current.top + rect.top - bounds.top + dy, width: rect.width, height: rect.height });
+    await new Promise(resolve => setTimeout(resolve, FEEDBACK_TIMING.burst));
   }
-  burst(frame: Frame, own: boolean, score = true, offsetX = 0) {
+  burst(frame: Frame, own: boolean, score = true, offsetX = 0, origin?: Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>) {
     if (!this.enabled() || !frame.matches.length) return;
     const bounds = this.scene.getBoundingClientRect();
     const shapes = ['polygon(0 0,50% 0,43% 48%,0 35%)', 'polygon(50% 0,100% 0,100% 42%,43% 48%)', 'polygon(0 35%,43% 48%,52% 100%,0 100%)', 'polygon(43% 48%,100% 42%,100% 100%,52% 100%)'];
@@ -55,7 +69,7 @@ export class BoardFeedback {
       const tile = frame.board[row][col];
       const source = this.scene.querySelector<HTMLElement>(`#board-controls [data-row="${row}"][data-col="${col}"]`);
       if (!tile || !source) continue;
-      const rect = source.getBoundingClientRect(), x = rect.left - bounds.left + offsetX, y = rect.top - bounds.top;
+      const rect = origin ?? source.getBoundingClientRect(), x = rect.left - bounds.left + offsetX, y = rect.top - bounds.top;
       centerX += x + rect.width / 2; centerY += y + rect.height / 2;
       for (let shard = 0; shard < shapes.length; shard++) {
         const piece = document.createElement('span'); piece.className = 'stone-fragment';
@@ -97,6 +111,6 @@ export class BoardFeedback {
   }
   private animate(element: HTMLElement, frames: Keyframe[], duration: number, done?: () => void, delay = 0) {
     const animation = element.animate(frames, { duration, delay, fill: 'backwards', easing: 'ease-out' }); this.animations.add(animation);
-    void animation.finished.then(() => done?.()).catch(() => {}).finally(() => { this.animations.delete(animation); element.remove(); });
+    return animation.finished.then(() => done?.()).catch(() => {}).finally(() => { this.animations.delete(animation); element.remove(); });
   }
 }

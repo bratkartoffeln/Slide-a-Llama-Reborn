@@ -14,7 +14,8 @@
 @keyframes bubble-pop{from{transform:scale(.2);opacity:1}to{transform:scale(1.35);opacity:0}}
 body.motion-off *,body.motion-off *:before,body.motion-off *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 
-body[data-theme=retro]{--ink:#17274a;--muted:#4a5260;--orange:#8b9a49;--line:#8b8a70;--paper:#f2efda;font-family:Tahoma,Verdana,sans-serif;background:#0860c5 url('/retro/landscape.png') center bottom/auto 100vh fixed no-repeat;color:var(--ink)}
+html:has(body[data-theme=retro]){background:#0860c5}
+body[data-theme=retro]{--ink:#17274a;--muted:#4a5260;--orange:#8b9a49;--line:#8b8a70;--paper:#f2efda;display:flow-root;min-height:100dvh;font-family:Tahoma,Verdana,sans-serif;background:#0860c5 url('/retro/landscape.png') center bottom/auto 100dvh fixed no-repeat;color:var(--ink)}
 body[data-theme=retro] #app{max-width:1240px;margin:22px auto;border:2px solid #dceaa7;outline:1px solid #4f652d;box-shadow:5px 8px 0 #12325855;background:#e9e9d8}
 body[data-theme=retro] .retro-titlebar{display:flex;align-items:center;gap:8px;height:28px;padding:3px 7px;background:linear-gradient(#c5eb80,#74ad2a 52%,#8cc549 54%,#a7d466);border-bottom:1px solid #497125;color:#fff;font-weight:bold;font-size:12px;text-shadow:1px 1px #548228}
 .retro-flower{font-size:22px;color:#e3f093;text-shadow:1px 1px #254d10}.retro-window-buttons{margin-left:auto;color:#385a1f;letter-spacing:5px;font-size:14px}
@@ -170,4 +171,26 @@ body[data-theme=retro] dialog h2 em{font-family:Tahoma,sans-serif;color:#537d2d}
  body[data-theme=retro] .points-panel p{font-size:10px}
  body[data-theme=retro] .mode-badge{font-size:6px}
  body[data-theme=retro] footer{font-size:8px;padding:14px}
+}
+
+/* Fit the desktop window and board to the available height as well as width. */
+@media(min-width:1101px){
+ body[data-theme=retro] #app{max-width:min(1240px,calc(100dvh + 100px))}
+ body[data-theme=retro] .chat-panel{min-height:0}
+ body[data-theme=retro] .chat-messages{height:clamp(180px,calc(100dvh - 450px),365px)}
+}
+@media(min-width:1101px) and (max-height:800px){
+ body[data-theme=retro] #app{max-width:max(760px,calc(100dvh + 80px));margin:10px auto}
+ body[data-theme=retro] .site-header{height:54px}
+ body[data-theme=retro] main{padding:12px}
+ body[data-theme=retro] .game-layout{grid-template-columns:180px minmax(300px,1fr) 205px}
+ body[data-theme=retro] .left-column{gap:12px}
+ body[data-theme=retro] .room-stats{margin-top:12px;padding-top:10px}
+ body[data-theme=retro] .chat-messages{height:clamp(180px,calc(100dvh - 480px),320px)}
+ body[data-theme=retro] .arena{padding:10px}
+ body[data-theme=retro] .retro-game-caption{font-size:22px;margin-bottom:6px}
+ body[data-theme=retro] .setup-panel,body[data-theme=retro] .room-panel{padding:12px}
+ body[data-theme=retro] .points-panel{padding:12px 10px}
+ body[data-theme=retro] .points-grid{gap:8px 6px;margin:12px 0}
+ body[data-theme=retro] footer{padding:8px 12px}
 }

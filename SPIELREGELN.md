@@ -23,6 +23,11 @@ sind im Spiel einsehbar und in `shared/game.ts` zentral festgelegt:
 | Melone | 40 / 80 / 120 | 2 |
 | Glocke | 50 / 100 / 150 | 1 |
 | Sieben | 60 / 120 / 180 | 1 |
+| BAR | 100 / 200 / 300 | 1 |
+
+BAR ergänzt seit 0.1.10 die sechs bisherigen Steine. Seine 100 Punkte pro
+Dreierreihe entsprechen `fruitScore[7]` aus dem Original-SWF; die bestehenden
+Punktewerte bleiben erhalten.
 
 Kaskaden werden mit ihrer laufenden Nummer multipliziert. Gleichzeitige horizontale
 und vertikale Linien zählen beide; ihr gemeinsames Feld wird nur einmal entfernt.
