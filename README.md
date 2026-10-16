@@ -1,6 +1,6 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.2** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.3** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
 Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
@@ -58,13 +58,22 @@ Tempel-, Landschafts-, Figuren- und Symbolgrafiken mit ICQ-artigen Fensterrahmen
 Banane, Pflaume und Birne ersetzen darin optisch Zitrone, Traube und Melone;
 Punkte und Spielzustand bleiben gleich.
 
-**✦** schaltet Einschub-, Fall-, Trefferketten-, Lamawechsel- und Sieganimationen
+Die Spielsteine haben unregelmäßige, abgeschlagene Tempelstein-Profile mit
+Sandsteinstruktur und sichtbarer Tiefe. Treffer zerlegen sie in Fragmente;
+die Punkte steigen direkt über der Kombination auf, bei Kaskaden mit Faktor.
+Die Lamas wechseln tatsächlich ihre Plätze, wippen beim Laufen und blinzeln
+im Stand mit voneinander unabhängigen Ruhebewegungen.
+
+**✦** schaltet Einschub-, Bruch-, Punkte-, Fall-, Trefferketten-, Lamawechsel- und Sieganimationen
 an oder aus. Ausschalten beendet laufende Animationen sofort; der endgültige
 Spielstand erscheint direkt. Die Systemeinstellung für reduzierte Bewegung
 hat Vorrang. **♪** schaltet separat die Effekte ein; Ton ist zunächst aus.
-Im Retro-Modus kommen drei aus der archivierten Flash-Fassung extrahierte
-Originaleffekte für Treffer, Ketten und Lamawechsel hinzu. Layout, Animationen
-und Ton werden lokal gespeichert. Beide Spieler wählen unabhängig voneinander.
+In beiden Layouts spielen 45 Originalvarianten aus sechs Symbolgruppen die
+passenden Treffer, ergänzt um einen Ketteneffekt und zehn Lama-Stimmen.
+**Stimmen** schaltet die positiven bzw. verärgerten Reaktionen bei eigenen
+Lama-Gewinnen/-Verlusten separat ab. Sound und Animationen funktionieren
+unabhängig voneinander. Die Auswahl wird lokal gespeichert; beide Spieler
+wählen unabhängig voneinander.
 
 Bildquellen, Gameplay-Videos, Extraktion und Zuordnung der Medien:
 [RETRO-QUELLEN.md](RETRO-QUELLEN.md).
