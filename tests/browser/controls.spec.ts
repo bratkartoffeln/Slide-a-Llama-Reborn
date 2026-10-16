@@ -57,6 +57,9 @@ async function prepare(page: import('@playwright/test').Page, ejection = false, 
     });
   });
   await page.goto('/'); await page.locator('#name').fill('Alex'); await page.locator('#create').click();
+  // The click sends a WebSocket request; wait for its snapshot to reveal and enable the board.
+  await expect(page.locator('#board-controls')).toBeVisible();
+  await expect(page.locator('.move-button:enabled')).toHaveCount(15);
   return { aims };
 }
 
