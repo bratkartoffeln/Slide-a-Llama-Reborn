@@ -33,13 +33,13 @@ dieses Skills startet den Workflow nicht.
   alles veröffentlicht und gemergt ist, verifiziere den Zustand und fahre beim
   abschließenden Wechsel auf `main` fort.
 - Führe die zum Änderungsumfang passenden Prüfungen aus. Orientiere dich an
-  den vorhandenen Paket-Skripten und `.github/workflows/nas-build.yml`. Sobald
+  den vorhandenen Paket-Skripten und `.github/workflows/verify.yml`. Sobald
   die Anwendung existiert, bei Quellcodeänderungen `npm test`, `npm run build`
   und, falls vorhanden, `npm run check` ausführen. Der Anwendungsvertrag lässt
   sich mit `node scripts/check-app-contract.mjs` prüfen; solange die Paketdateien
-  fehlen, schlägt diese Prüfung erwartungsgemäß fehl. Der NAS-Workflow läuft
-  nur manuell (`workflow_dispatch`); ein fehlender automatischer PR-Check ist
-  deshalb kein erfolgreicher Build. Bei Infrastrukturänderungen die betroffenen
+  fehlen, schlägt diese Prüfung erwartungsgemäß fehl. `verify.yml` prüft bei
+  Push/PR Anwendung, Browser und Produktionscontainer; `nas-build.yml` erstellt
+  nur auf manuellen Auftrag ein Quellpaket. Bei Infrastrukturänderungen die betroffenen
   Compose-/Docker-Konfigurationen passend prüfen. Reine Skill- oder
   Dokumentationsänderungen benötigen keine vollständigen Anwendungstests.
   Behaupte nur tatsächlich ausgeführte Prüfungen als bestanden.

@@ -12,4 +12,6 @@ secrets
 *.log
 work
 outputs
+test-results
+playwright-report
 .nas-update.lock
