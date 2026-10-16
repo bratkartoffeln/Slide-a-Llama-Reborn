@@ -1,10 +1,10 @@
-# Slide-a-Lama auf dem QNAP neben RPS
+# Slide-a-Llama auf dem QNAP neben RPS
 
 ## Stand und Voraussetzungen
 
 Vorlage: `F:\Daten\DEV\Games\RPS-Online-reborn`, untersucht am 16.10.2026.
 Ziel: `F:\Daten\DEV\Games\Slide-a-Llama-Reborn`.
-Version 0.1.0 enthält Anwendungscode, Paketdateien, Build und Tests.
+Version 0.1.1 enthält Anwendungscode, Paketdateien, Build und Tests.
 Browserclient und WebSocket-Server werden gemeinsam unter `dist/` gebaut.
 Lokaler Build und Multiplayerprüfungen sind erfolgreich; Dockerbuild und
 Live-NAS-/Porttest sind auf diesem Arbeitsrechner noch nicht bestätigt.
@@ -30,20 +30,20 @@ Der Früchte-Modus ist implementiert; Regeln und Abweichungen stehen in
 
 ## Getrennte Ressourcen
 
-| Ressource | Bestehendes RPS laut Repository | Slide-a-Lama, vorgeschlagen |
+| Ressource | Bestehendes RPS laut Repository | Slide-a-Llama, vorgeschlagen |
 | --- | --- | --- |
-| Compose-Projekt | rps-arena | slide-a-lama |
-| NAS-Verzeichnis | /share/Container/rps-arena/rps-remake | /share/Container/slide-a-lama/app |
+| Compose-Projekt | rps-arena | slide-a-llama |
+| NAS-Verzeichnis | /share/Container/rps-arena/rps-remake | /share/Container/slide-a-llama/app |
 | Spielport auf NAS | 2567 | 2568 |
 | HTTPS-Port auf NAS | 18443 | 19943 |
 | Öffentlicher TCP-Port | 8443 | 9443, vorher prüfen |
 | Proxyziel intern | rps:2567 | game:2568 |
-| Domain | flusensieb.dns.navy | eigener neuer Hostname, noch festzulegen |
-| Netzwerk | rps-arena_default | slide-a-lama_default |
-| Zertifikats-Volumes | rps-arena_caddy_data/config | slide-a-lama_caddy_data/config |
+| Domain | flusensieb.dns.navy | flusensieb.dns.navy |
+| Netzwerk | rps-arena_default | slide-a-llama_default |
+| Zertifikats-Volumes | rps-arena_caddy_data/config | slide-a-llama_caddy_data/config |
 
-Container heißen standardmäßig `slide-a-lama-game-1` und
-`slide-a-lama-caddy-1`. Keine globalen Container-Namen oder externen Netzwerke.
+Container heißen standardmäßig `slide-a-llama-game-1` und
+`slide-a-llama-caddy-1`. Keine globalen Container-Namen oder externen Netzwerke.
 Das neue Caddy-Image bleibt Compose-projektbezogen. RPS-Dateien, DNS, Token,
 Volumes und laufende Container werden nicht geändert oder eingebunden.
 Die Werte sind anhand der Vorlagendateien getrennt; Belegung durch weitere
@@ -55,8 +55,8 @@ Erst Build/Tests und `npm run check:docker` prüfen. Danach in einer
 Administrations-SSH-Sitzung auf dem NAS einen **neuen** Ordner anlegen:
 
 ```sh
-mkdir -p /share/Container/slide-a-lama/app
-cd /share/Container/slide-a-lama/app
+mkdir -p /share/Container/slide-a-llama/app
+cd /share/Container/slide-a-llama/app
 ```
 
 Den vollständigen geprüften Zielprojektstand direkt hierher kopieren. Keine
@@ -64,7 +64,7 @@ RPS-Verzeichnisse überschreiben. `docker ps --format 'table {{.Names}}\t{{.Port
 und die QNAP-Portbelegung prüfen; nötigenfalls freie Ports in `.env` setzen.
 Compose v2.29.1 ist laut RPS-Anleitung auf dem NAS vorhanden; tatsächlich mit
 `docker compose version` bestätigen. Alle Befehle über die hier mitgelieferten
-Skripte oder explizit mit **`-p slide-a-lama`** ausführen.
+Skripte oder explizit mit **`-p slide-a-llama`** ausführen.
 
 ```sh
 cp .env.example .env
@@ -77,29 +77,30 @@ direkten LAN-Zugriff braucht, kann `SLIDE_LAN_BIND=127.0.0.1` setzen.
 
 ## Eigenes HTTPS mit dynv6
 
-1. Einen separaten eigenen dynv6-Hostnamen einrichten und DDNS aktualisieren.
-   Den RPS-Hostnamen samt dessen A/AAAA-Einträgen unverändert lassen.
-2. `.env`: `SLIDE_DOMAIN` auf den neuen Hostnamen setzen, ohne Protokoll, Port
-   oder Pfad. Öffentliches URL-Beispiel: `https://DEIN-NEUER-HOST:9443`.
+1. Der bestehende eigene dynv6-Hostname `flusensieb.dns.navy` wird für beide
+   Spiele verwendet. DDNS sowie die bestehenden A/AAAA-Einträge nicht ändern.
+2. `.env`: `SLIDE_DOMAIN=flusensieb.dns.navy` setzen, ohne Protokoll, Port
+   oder Pfad. Slide-a-Llama: `https://flusensieb.dns.navy:9443`;
+   RPS bleibt auf `https://flusensieb.dns.navy:8443`.
 3. A muss zur öffentlichen Anschluss-IPv4 passen. AAAA nur veröffentlichen,
    wenn IPv6 bis zum neuen Caddy auf dem öffentlichen Port tatsächlich
    funktioniert; IPv4-Portumleitung gilt nicht automatisch für IPv6.
 4. Auf dem NAS `sh scripts/setup-dynv6-token.sh` ausführen. Das Skript übernimmt
    die verdeckte Eingabe aus RPS und schreibt nur das neue lokale Secret mit
-   restriktiven Dateirechten. Einen Token mit Zugriff auf die neue Zone nutzen;
+   restriktiven Dateirechten. Einen Token mit Zugriff auf diese Zone nutzen;
    keine Secrets aus RPS kopieren oder in Git, `.env` oder Images speichern.
 5. Erst prüfen und bauen:
 
 ```sh
-docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml config --quiet
-docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml build
+docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml config --quiet
+docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml build
 ```
 
 Optional vor dem Start die Caddy-Konfiguration prüfen (verwendet den echten
 lokalen Token, gibt ihn nicht aus; stellt noch kein Zertifikat aus):
 
 ```sh
-docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 ```
 
 Dann `sh scripts/nas-update.sh https` ausführen. Als neue IPv4-Routerfreigabe
@@ -112,8 +113,8 @@ sind erforderlich. DNS-01 prüft über TXT bei dynv6; der Browserzugang benötig
 trotzdem die genannte Portfreigabe.
 
 ```sh
-docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml ps
-docker compose -p slide-a-lama -f compose.yaml -f compose.https.yaml logs --tail=100 game caddy
+docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml ps
+docker compose -p slide-a-llama -f compose.yaml -f compose.https.yaml logs --tail=100 game caddy
 ```
 
 Über Mobilfunk die neue HTTPS-Adresse und `/ready` ohne Zertifikatswarnung
@@ -123,13 +124,13 @@ bestätigt weder gültiges TLS noch öffentliche Erreichbarkeit.
 
 ## Updates und GitHub
 
-Vor Updates laufende Slide-a-Lama-Partien beenden; Speicherzustände könnten
+Vor Updates laufende Slide-a-Llama-Partien beenden; Speicherzustände könnten
 beim Neustart verloren gehen. Den alten Quellstand bzw. das bisherige Image
 für einen möglichen Rückwechsel behalten. Neue Quellen vollständig übernehmen,
 lokale `.env` und `secrets/` behalten. Danach denselben Modus verwenden:
 
 ```sh
-cd /share/Container/slide-a-lama/app
+cd /share/Container/slide-a-llama/app
 sh scripts/nas-update.sh https
 ```
 

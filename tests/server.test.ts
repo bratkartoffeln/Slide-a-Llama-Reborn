@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { WebSocket } from 'ws';
 import { startServer as createServer, type ServerOptions } from '../server/app.js';
 import type { ServerMessage, Snapshot } from '../shared/protocol.js';
@@ -104,7 +105,8 @@ test('Resignation and mutual rematch track wins, alternate starters and invalida
 });
 test('Health exposes version only; origin checks and shutdown signaling work', async t => {
   const server = await startServer({ port: 0 }); t.after(() => server.close());
-  const health = await fetch(server.url + '/ready'); assert.equal(health.status, 200); assert.equal((await health.json()).version, '0.1.0');
+  const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+  const health = await fetch(server.url + '/ready'); assert.equal(health.status, 200); assert.equal((await health.json()).version, version);
   const bad = new WebSocket(server.url.replace('http:', 'ws:') + '/ws', { origin: 'https://evil.invalid' });
   const rejected = await new Promise<number>(yes => { bad.on('unexpected-response', (_req, res) => { res.resume(); yes(res.statusCode!); bad.terminate(); }); bad.on('error', () => {}); });
   assert.equal(rejected, 403);

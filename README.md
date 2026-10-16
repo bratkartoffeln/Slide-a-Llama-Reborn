@@ -1,6 +1,6 @@
-﻿# Slide-a-Lama Reborn
+﻿# Slide-a-Llama Reborn
 
-Version **0.1.0** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.1** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche, eigene
 SVG-Grafiken, Maus-, Touch- und Tastaturbedienung.
 

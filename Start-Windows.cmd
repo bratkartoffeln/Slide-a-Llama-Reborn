@@ -10,5 +10,5 @@ if not exist node_modules (
   call npm ci
   if errorlevel 1 exit /b 1
 )
-echo Slide-a-Lama: Nach dem Start http://localhost:5173 oeffnen.
+echo Slide-a-Llama: Nach dem Start http://localhost:5173 oeffnen.
 call npm run dev

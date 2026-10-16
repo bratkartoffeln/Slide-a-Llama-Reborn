@@ -3,7 +3,7 @@ import { WebSocket } from 'ws';
 export async function checkOnline(url) {
   const health = await fetch(new URL('/ready', url), { signal: AbortSignal.timeout(5000) });
   assert.equal(health.status, 200); assert.equal((await health.json()).ready, true);
-  const html = await fetch(url); assert.equal(html.status, 200); assert.match(await html.text(), /Slide-a-Lama/);
+  const html = await fetch(url); assert.equal(html.status, 200); assert.match(await html.text(), /Slide-a-Llama/);
   const clients = [];
   async function connect() {
     const endpoint = new URL('/ws', url); endpoint.protocol = endpoint.protocol === 'https:' ? 'wss:' : 'ws:';

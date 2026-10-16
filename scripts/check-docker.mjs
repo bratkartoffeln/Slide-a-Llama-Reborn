@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { checkOnline } from './check-online.mjs';
 const suffix = randomBytes(5).toString('hex');
-const image = `slide-a-lama-check:${suffix}`, container = `slide-a-lama-check-${suffix}`;
+const image = `slide-a-llama-check:${suffix}`, container = `slide-a-llama-check-${suffix}`;
 function docker(args, capture = false) {
   const result = spawnSync('docker', args, { encoding: 'utf8', stdio: capture ? 'pipe' : 'inherit', timeout: 600_000 });
   if (result.error || result.status !== 0) throw new Error(`docker ${args[0]} fehlgeschlagen: ${result.error?.message ?? result.stderr ?? result.status}`);
@@ -11,7 +11,7 @@ function docker(args, capture = false) {
 docker(['info'], true);
 let built = false, started = false;
 try {
-  docker(['compose', '-p', `slide-a-lama-check-${suffix}`, '-f', 'compose.yaml', 'config', '--quiet']);
+  docker(['compose', '-p', `slide-a-llama-check-${suffix}`, '-f', 'compose.yaml', 'config', '--quiet']);
   docker(['build', '-t', image, '.']); built = true;
   docker(['run', '--detach', '--name', container, '-p', '127.0.0.1::2568', image], true); started = true;
   const port = docker(['port', container, '2568/tcp'], true).split(':').at(-1);
