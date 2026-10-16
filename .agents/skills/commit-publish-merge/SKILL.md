@@ -6,7 +6,8 @@ description: Änderungen dieses Projekts mit einer KI-formulierten Commit-Nachri
 # Commit, Publish und Merge nach main
 
 Führe den angeforderten Ablauf vollständig aus. Ein Auftrag für den gesamten
-Workflow autorisiert Commit, Push, PR-Erstellung und Merge; frage dafür nicht
+Workflow autorisiert Commit, Push, PR-Erstellung und Merge einschließlich des
+unten beschriebenen Admin-Bypasses für fehlende Reviews; frage dafür nicht
 erneut nach einer allgemeinen Bestätigung. Technisch erforderliche Freigaben
 der Ausführungsumgebung bleiben einzuhalten. Das bloße Erstellen oder Bearbeiten
 dieses Skills startet den Workflow nicht.
@@ -76,11 +77,20 @@ dieses Skills startet den Workflow nicht.
    Warte in kurzen beobachtbaren Abschnitten und gib bei längerer Laufzeit
    Statusmeldungen. Fehlende Checks ersetzen keine lokal erforderlichen Tests.
 3. Merge erst bei erfolgreichen erforderlichen Prüfungen und erfüllten
-   Repository-Vorgaben. Verwende ausdrücklich die Methode **Merge-Commit**:
+   Repository-Vorgaben, mit der folgenden Ausnahme für Reviews. Verwende
+   ausdrücklich die Methode **Merge-Commit**:
    `gh pr merge NUMMER --repo OWNER/REPO --merge --match-head-commit HEAD_SHA`.
    Damit erzeugt GitHub den Merge-Commit; es braucht keinen zusätzlichen lokalen
-   Merge. Verwende weder Squash noch Rebase noch einen Admin-Bypass. Lösche den
-   Arbeitsbranch nur auf gesonderten Wunsch.
+   Merge. Fehlen ausschließlich PR-/Codeowner-Freigaben, darf ein berechtigter
+   Repository-Admin den von GitHub erlaubten Bypass verwenden. Prüfe zuvor die
+   Admin-/Bypass-Berechtigung, die aktuellen Regeln und die Head-SHA; verwende
+   `gh pr merge NUMMER --repo OWNER/REPO --merge --admin --match-head-commit HEAD_SHA`
+   oder den entsprechenden GitHub-API-Merge mit `merge_method: merge` und `sha`.
+   Umgehe damit keine fehlgeschlagenen oder noch laufenden erforderlichen
+   Prüfungen. Ändere oder deaktiviere keine Branch-Regeln, um den Merge zu
+   ermöglichen. Melde den verwendeten Review-Bypass im Abschluss.
+   Verwende weder Squash noch Rebase. Lösche den Arbeitsbranch nur auf
+   gesonderten Wunsch.
 4. Prüfe anschließend den tatsächlichen PR-Zustand, etwa mit `gh pr view NUMMER
    --repo OWNER/REPO --json state,mergedAt,mergeCommit,url,headRefOid`. Eine
    angenommene Merge-Anforderung oder ein eingeplanter Auto-Merge reicht nicht
@@ -95,9 +105,11 @@ dieses Skills startet den Workflow nicht.
   MERGE_SHA HEAD`, dass der PR-Merge-Commit lokal enthalten ist, und prüfe Branch
   sowie Arbeitsverzeichnis abschließend.
 - Bei fehlender Authentifizierung, fehlgeschlagenen Prüfungen, Merge-Konflikten,
-  erforderlichem Review, deaktivierten Merge-Commits oder fehlenden Rechten:
+  fehlendem Review ohne zulässigen Admin-Bypass, deaktivierten Merge-Commits
+  oder fehlenden Rechten:
   halte am betroffenen Schritt an und berichte den konkreten Blocker sowie
-  Commit, Branch und vorhandene PR-URL. Umgehe keine Branch-Regeln. Wiederhole
+  Commit, Branch und vorhandene PR-URL. Verwende nur den oben erlaubten
+  Review-Bypass; umgehe keine anderen Branch-Regeln. Wiederhole
   unverändert fehlgeschlagene Aktionen nicht endlos; bei ausbleibendem CI-
   Fortschritt prüfe die Ursache und berichte den offenen Zustand.
 - Verwirf und verstecke keine lokalen Änderungen mit Reset, Clean oder Stash.
