@@ -37,8 +37,15 @@ test('Two browsers play, exchange safe chat, reconnect after reload, and agree o
   await host.screenshot({ path: 'test-results/desktop-game.png', fullPage: true });
   await guest.locator('#resign').click(); await guest.locator('#confirm-yes').click();
   await expect(host.locator('#result')).toContainText('Die Herde feiert dich!');
-  await host.locator('#rematch').click(); await guest.locator('#rematch').click();
+  await expect(host.locator('#result')).toHaveAttribute('data-outcome', 'won');
+  await expect(guest.locator('#result')).toHaveAttribute('data-outcome', 'lost');
+  await expect(host.locator('#result #rematch')).toBeVisible();
+  await host.screenshot({ path: 'test-results/result-won.png', fullPage: true });
+  await host.locator('#rematch').click();
+  await expect(host.locator('#result')).toBeVisible();
+  await guest.locator('#rematch').click();
   await expect(host.locator('#round')).toHaveText('2'); await expect(guest.locator('#turn-label')).toContainText('Du bist dran');
+  await expect(host.locator('#result')).toBeHidden(); await expect(guest.locator('#result')).toBeHidden();
   expect(errors).toEqual([]);
   await hostContext.close(); await guestContext.close();
 });

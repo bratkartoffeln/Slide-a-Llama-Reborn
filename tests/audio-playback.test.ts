@@ -18,10 +18,14 @@ test('New turns let original samples finish; queued voices resume on ended and m
   const audio = new GameAudio(); audio.setEnabled(true);
   try {
     const game = newGame(); const last = play(game, 0, { side: 'top', lane: 0 }).lastMove!;
-    audio.playTurn(last, [0, 0], [60, 0], 0, false, game.board);
+    audio.playTurn(last, [0, 0], [60, 0], 0, false, game.board, 'room:1:1');
     await new Promise(resolve => setTimeout(resolve, 25));
     const firstVoice = samples.find(sample => sample.src.includes('transhappy'))!;
     assert.ok(firstVoice);
+    const played = samples.length;
+    audio.playTurn(last, [0, 0], [60, 0], 0, false, game.board, 'room:1:1');
+    await new Promise(resolve => setTimeout(resolve, 25));
+    assert.equal(samples.length, played);
     audio.playTurn(last, [0, 0], [60, 0], 1, false, game.board);
     await new Promise(resolve => setTimeout(resolve, 25));
     assert.equal(firstVoice.pauses, 0);
