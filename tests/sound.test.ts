@@ -25,6 +25,18 @@ test('BAR matches select the four original fruit6 variants', () => {
   assert.ok(turnSounds(next.lastMove!, game.scores, next.scores, 0).some(cue => cue.kind === 'match' && cue.tile === 'bar'));
   assert.deepEqual(MATCH_SOUNDS.bar, Array.from({ length: 4 }, (_, i) => `/audio/original/fruit6-${i}.mp3`));
 });
+test('Every recognized cascade gets one thunder before the title and burst, including repeated symbols', () => {
+  const game = newGame(); game.board = empty();
+  game.board[4] = ['cherry', 'cherry', null, 'lemon', 'lemon']; game.board[3][2] = 'lemon'; game.queue[0] = 'cherry';
+  const last = play(game, 0, { side: 'left', lane: 4 }).lastMove!;
+  const cues = turnSounds(last, game.scores, [last.points, 0], 0, true, game.board);
+  const thunder = cues.filter(cue => cue.kind === 'thunder');
+  const hits = cues.filter(cue => cue.kind === 'match');
+  assert.equal(thunder.length, 2);
+  assert.equal(hits[0].delay - thunder[0].delay, FEEDBACK_TIMING.matchBlink);
+  assert.equal(hits[1].delay - thunder[1].delay, FEEDBACK_TIMING.matchBlink);
+  assert.equal(cues.find(cue => cue.kind === 'stone' && cue.action === 'shatter')!.delay - thunder[0].delay, FEEDBACK_TIMING.matchBlink + FEEDBACK_TIMING.matchTitle);
+});
 test('Lama reactions depend on gaining or losing a follower, with no voice on unchanged teams', () => {
   const game = newGame(); const next = play(game, 0, { side: 'top', lane: 0 }); const last = next.lastMove!;
   for (const [before, after, gaining] of [
@@ -43,7 +55,7 @@ test('Combo accents follow the hit, finish before the next cascade and postpone 
   game.board[4] = ['cherry', 'cherry', null, 'lemon', 'lemon']; game.board[3][2] = 'lemon'; game.queue[0] = 'cherry';
   const last = play(game, 0, { side: 'left', lane: 4 }).lastMove!;
   last.frames.push({ ...last.frames[1], multiplier: 3 });
-  const step = FEEDBACK_TIMING.burst + FEEDBACK_TIMING.fall;
+  const step = FEEDBACK_TIMING.matchBlink + FEEDBACK_TIMING.matchTitle + FEEDBACK_TIMING.burst + FEEDBACK_TIMING.fall;
   assert.equal(boardMotionMs(last), FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity + 3 * step + 2 * FEEDBACK_TIMING.comboHold);
   for (const animated of [true, false]) {
     const cues = turnSounds(last, [50, 0], [80, 0], 0, animated);
@@ -51,7 +63,7 @@ test('Combo accents follow the hit, finish before the next cascade and postpone 
     assert.equal(combos.length, 2);
     for (const [index, combo] of combos.entries()) {
       const hit = cues.find(cue => cue.kind === 'match' && cue.multiplier === index + 2)!;
-      assert.equal(combo.delay - hit.delay, FEEDBACK_TIMING.comboDelay);
+      assert.equal(combo.delay - hit.delay, FEEDBACK_TIMING.comboDelay + (animated ? FEEDBACK_TIMING.matchTitle : 0));
       const following = index === 0 ? cues.find(cue => cue.kind === 'match' && cue.multiplier === 3)! : cues.find(cue => cue.kind === 'voice')!;
       assert.ok(following.delay >= combo.delay + 1430, 'Original combo sample must finish before the next cascade or transfer');
     }
@@ -69,8 +81,8 @@ test('Crossed lines of the same symbol use one matching sound and all sound bank
   const next = play(game, 0, { side: 'top', lane: 2 });
   assert.equal(turnSounds(next.lastMove!, game.scores, next.scores, 0).filter(c => c.kind === 'match').length, 1);
 });
-test('All 74 catalogued original files are present and distinct; silent scheduling still follows cascades', () => {
-  assert.equal(ORIGINAL_SOUND_FILES.length, 74); assert.equal(new Set(ORIGINAL_SOUND_FILES).size, 74);
+test('All 78 catalogued original files are present and distinct; silent scheduling still follows cascades', () => {
+  assert.equal(ORIGINAL_SOUND_FILES.length, 78); assert.equal(new Set(ORIGINAL_SOUND_FILES).size, 78);
   for (const file of ORIGINAL_SOUND_FILES) assert.ok(readFileSync(new URL('../public' + file, import.meta.url)).length > 500, file);
   const game = newGame(); game.board = empty(); game.board[4][1] = game.board[4][2] = 'bell'; game.queue[0] = 'bell';
   const next = play(game, 0, { side: 'top', lane: 0 });

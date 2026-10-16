@@ -8,30 +8,63 @@ export class HerdMotion {
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private scheduled = new Set<HTMLElement>();
   private animations = new Set<Animation>();
+  private walks = new Set<number>();
   constructor(private root: HTMLElement, private enabled: () => boolean) {}
   clear() {
     for (const timer of this.timers) clearTimeout(timer); this.timers.clear();
     this.scheduled.clear();
     for (const animation of this.animations) animation.cancel(); this.animations.clear();
+    for (const frame of this.walks) cancelAnimationFrame(frame); this.walks.clear();
     this.root.querySelectorAll('.is-crossing').forEach(element => element.classList.remove('is-crossing'));
+    this.root.querySelectorAll<HTMLElement>('.mini-llama').forEach(element => this.paint(element, Number(element.dataset.team) as Seat));
   }
   render(count: number, transfer: boolean) {
     if (this.root.children.length === 10 && this.teams[0].length === count) return;
     this.clear();
-    const old = new Map([...this.root.querySelectorAll<HTMLElement>('.mini-llama')].map(element => [Number(element.dataset.llama), { x: element.getBoundingClientRect().left, team: element.dataset.team }]));
+    const old = new Map([...this.root.querySelectorAll<HTMLElement>('.mini-llama')].map(element => {
+      const rect = element.getBoundingClientRect();
+      return [Number(element.dataset.llama), { x: rect.left + rect.width / 2, y: rect.bottom, team: element.dataset.side }];
+    }));
     while (this.teams[0].length < count) this.teams[0].push(this.teams[1].pop()!);
     while (this.teams[0].length > count) this.teams[1].push(this.teams[0].pop()!);
-    this.root.innerHTML = this.teams.map((ids, team) => ids.map(id => `<span class="mini-llama team-${team === 0 ? 'zero' : 'one'}" data-llama="${id}" data-team="${team}"><span class="llama-life">${llama(team === 0 ? '#eee0c4' : '#d3e0d4', team === 0 ? '#ce7855' : '#5c8977')}${follower(team as Seat)}</span></span>`).join('')).join('');
+    this.root.innerHTML = this.teams.map((ids, team) => ids.map((id, index) => {
+      const column = index % 5, row = Math.floor(index / 5);
+      const x = team === 0 ? 7 + column * 7.5 : 93 - column * 7.5;
+      const height = row * 13 + (column % 2) * 5;
+      return `<span class="mini-llama team-${team === 0 ? 'zero' : 'one'}" data-llama="${id}" data-team="${team}" style="left:${x}%;bottom:${height}px;z-index:${3 - row}"><span class="llama-life">${llama(team === 0 ? '#eee0c4' : '#d3e0d4', team === 0 ? '#ce7855' : '#5c8977')}${follower(team as Seat)}</span></span>`;
+    }).join('')).join('');
+    this.root.querySelectorAll<HTMLElement>('.mini-llama').forEach(element => this.paint(element, Number(element.dataset.team) as Seat));
     if (transfer && this.enabled()) for (const element of this.root.querySelectorAll<HTMLElement>('.mini-llama')) {
       const previous = old.get(Number(element.dataset.llama)); if (!previous) continue;
-      const dx = previous.x - element.getBoundingClientRect().left, converted = previous.team !== element.dataset.team;
+      const rect = element.getBoundingClientRect();
+      const dx = previous.x - rect.left - rect.width / 2, dy = previous.y - rect.bottom, converted = previous.team !== element.dataset.team;
       if (converted) element.classList.add('is-crossing');
+      if (converted) this.paint(element, Number(previous.team) as Seat);
       if (dx || converted) this.animate(element, converted ? [
-        { translate: `${dx}px 0`, rotate: '0deg' }, { translate: `${dx * .75}px -5px`, rotate: '-3deg', offset: .25 },
-        { translate: `${dx * .5}px 0`, rotate: '3deg', offset: .5 }, { translate: `${dx * .25}px -5px`, rotate: '-2deg', offset: .75 }, { translate: '0 0', rotate: '0deg' }
-      ] : [{ translate: `${dx}px 0` }, { translate: '0 0' }], converted ? FEEDBACK_TIMING.transfer : 900, () => element.classList.remove('is-crossing'));
+        { translate: `${dx}px ${dy}px`, rotate: '0deg' }, { translate: `${dx * .75}px ${dy * .75 - 5}px`, rotate: '-3deg', offset: .25 },
+        { translate: `${dx * .5}px ${dy * .5}px`, rotate: '3deg', offset: .5 }, { translate: `${dx * .25}px ${dy * .25 - 5}px`, rotate: '-2deg', offset: .75 }, { translate: '0 0', rotate: '0deg' }
+      ] : [{ translate: `${dx}px ${dy}px` }, { translate: '0 0' }], converted ? FEEDBACK_TIMING.transfer : 900, () => {
+        element.classList.remove('is-crossing'); this.paint(element, Number(element.dataset.team) as Seat);
+      });
+      if (converted) this.followSide(element);
     }
     this.refresh();
+  }
+  private paint(element: HTMLElement, side: Seat) {
+    element.dataset.side = String(side);
+    element.style.setProperty('--llama-accessory', side === 0 ? '#d84d55' : '#587bdb');
+    const filter = element.querySelector('filter')?.id;
+    element.querySelector('.retro-follower image')?.setAttribute('filter', side === 0 && filter ? `url(#${filter})` : 'none');
+  }
+  private followSide(element: HTMLElement) {
+    const frame = requestAnimationFrame(() => {
+      this.walks.delete(frame);
+      if (!element.isConnected || !element.classList.contains('is-crossing')) return;
+      const root = this.root.getBoundingClientRect(), rect = element.getBoundingClientRect();
+      this.paint(element, rect.left + rect.width / 2 < root.left + root.width / 2 ? 0 : 1);
+      this.followSide(element);
+    });
+    this.walks.add(frame);
   }
   refresh() {
     if (!this.enabled() || document.hidden) {

@@ -148,10 +148,12 @@ body.motion-off .result-confetti{display:none}
 .points-grid{grid-template-columns:repeat(7,minmax(0,1fr))}
 body[data-theme=retro] .points-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 body[data-theme=retro] .points-grid .tile-art{width:33px;height:38px}
-.turn-counter{display:flex;align-items:center;justify-content:center;gap:5px;align-self:center;min-width:94px;height:32px;margin:4px auto 0;color:#bb3037;background:linear-gradient(#f7e6aa,#cfab59);border:2px solid;border-color:#fff4c5 #997335 #997335 #fff4c5;box-shadow:0 2px 0 #76512655;font:bold 23px/1 Tahoma,sans-serif;font-variant-numeric:tabular-nums}
+.turn-counter{position:absolute;z-index:8;left:50%;bottom:0;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:5px;height:28px;margin:0;padding:0;color:#ed5a52;background:none;border:0;box-shadow:none;font:bold 21px/1 Tahoma,sans-serif;font-variant-numeric:tabular-nums;pointer-events:none}
+body[data-theme=retro] .turn-counter{left:48.5%;top:calc(81.5% - 8px);bottom:auto;transform:translate(-50%,-50%);width:21%;height:5.1%;font-size:clamp(12px,1.5vw,22px)}
+body[data-theme=retro] .turn-counter svg{width:1.1em;height:1em}
 .turn-counter[data-team="1"]{color:#315dc4}.turn-counter>span{display:flex}.turn-counter svg{width:27px;height:23px;fill:currentColor;stroke-width:3}
 .turn-counter[data-team="0"] .turn-counter-right,.turn-counter[data-team="1"] .turn-counter-left{display:none}
-.insertion-preview{position:absolute;z-index:9;pointer-events:none;--insert-x:0px;--insert-y:0px}
+.insertion-preview{position:absolute;z-index:6;pointer-events:none;--insert-x:0px;--insert-y:0px}
 .insertion-preview[data-side=left]{--insert-x:6px}.insertion-preview[data-side=right]{--insert-x:-6px}.insertion-preview[data-side=top]{--insert-y:6px}
 .insertion-preview>.tile{display:flex;align-items:center;justify-content:center;width:100%;height:100%;animation:insertion-nudge .65s ease-in-out infinite alternate;filter:drop-shadow(0 3px 2px #34281766)}
 .temple-foreground{display:none;position:absolute;inset:-8px 0 0;height:100%;z-index:7;pointer-events:none}
@@ -159,9 +161,41 @@ body[data-theme=retro] .temple-foreground{display:block}
 .temple-foreground>img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .temple-pillar-left{clip-path:polygon(0 0,27% 0,27% 76%,0 76%)}
 .temple-pillar-right{clip-path:polygon(73% 0,100% 0,100% 76%,73% 76%)}
-.turn-counter .urgent{text-shadow:0 0 5px #fff3a6;outline:1px solid currentColor;outline-offset:2px}
+.turn-counter .urgent{text-shadow:0 0 5px #fff3a6}
+.match-announcement{position:absolute;z-index:12;left:50%;top:35%;width:98%;pointer-events:none}
+.match-announcement img{display:block;width:100%;height:auto}
+body[data-theme=modern] .board-scene{padding-bottom:36px}
+/* Wider pillars frame the stone grid while both previews and fragments pass behind them. */
+body[data-theme=retro] .retro-temple{left:-12.5%;width:125%;right:auto}
+body[data-theme=retro] .temple-foreground{left:-12.5%;right:auto;width:125%}
+body[data-theme=retro] .turn-counter{left:48.125%}
+.turn-line,#herd-caption,#move-feedback{display:none!important}
+.player-row{justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.player-row .versus,.player-info>span,.player-info>small,.player-row .avatar{display:none}
+.player-row .player,body[data-theme=retro] .player-row .player{flex:0 1 46%;min-width:0;gap:2px;padding:2px;border:2px outset #eee7c9;border-radius:1px;background:#d6cdae;box-shadow:none}
+.player-row .player-info{display:contents}
+.player-row .player-info>strong,body[data-theme=retro] .player-info>strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:none;font:italic bold 11px/20px Tahoma,sans-serif;letter-spacing:0;color:#da342b;background:#fff4cd;padding:0 3px;text-transform:uppercase}
+.player-row .player-one .player-info>strong,body[data-theme=retro] .player-one .player-info>strong{color:#5553bf}
+.player-row .score,body[data-theme=retro] .score{font:bold 16px/20px Consolas,'Courier New',monospace;letter-spacing:0;color:#fff4c9;background:#45463f;border:1px inset #e2dab8;min-width:43px;padding:0 2px;text-align:right}
+.player-row .player.active,body[data-theme=retro] .player-row .player.active{border-color:#fff5a8;box-shadow:0 0 0 1px #9b7728}
+.temple-stage .herd,body[data-theme=retro] .temple-stage .herd{padding:0;border:0}
+.temple-stage .herd-llamas,body[data-theme=retro] .temple-stage .herd-llamas{position:relative;display:block;height:80px;margin:0}
+.herd-llamas>.mini-llama,body[data-theme=retro] .herd-llamas>.mini-llama{position:absolute;width:11%;margin-left:-5.5%;transform-origin:center bottom}
+@media(max-width:680px),(hover:none),(pointer:coarse){
+ #board-controls,body[data-theme=retro] #board-controls{grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,auto);margin:0 8%;gap:2px}
+ .move-button,body[data-theme=retro] .move-button{position:relative;z-index:8;aspect-ratio:1;min-height:0;padding:2px;margin:0}
+ .move-button svg,body[data-theme=retro] .move-button svg{width:70%;height:70%}
+ body[data-theme=retro] .retro-temple,body[data-theme=retro] .temple-foreground{left:-17.5%;width:135%}
+ body[data-theme=retro] .board-scene{padding-bottom:32%}
+ body[data-theme=retro] .turn-counter{left:47.975%}
+ .temple-stage .herd-llamas,body[data-theme=retro] .temple-stage .herd-llamas{height:70px}
+}
 @keyframes insertion-nudge{from{translate:0 0}to{translate:var(--insert-x) var(--insert-y)}}
-@media(min-width:681px) and (hover:hover) and (pointer:fine){.move-button.active-arrow>svg{visibility:hidden}}
+@media(min-width:681px) and (hover:hover) and (pointer:fine){
+ .move-button,.move-button.active-arrow,body[data-theme=retro] .move-button,body[data-theme=retro] .move-button.active-arrow{opacity:0;background:none;border-color:transparent;box-shadow:none}
+ .move-button>svg{visibility:hidden}
+ #board-controls{cursor:pointer}
+}
 @media(max-width:680px),(hover:none),(pointer:coarse){
  .insertion-preview{display:none}
  .move-button,body[data-theme=retro] .move-button{opacity:1;background:linear-gradient(#d9e8c1,#adc58f);border:1px solid #76905f;box-shadow:0 1px #6e805355;color:#335c38}

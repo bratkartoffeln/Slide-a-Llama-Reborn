@@ -4,6 +4,7 @@ export { FEEDBACK_TIMING } from '../shared/feedback';
 import type { STONE_SOUNDS } from './audio-catalog';
 
 export type TurnSound = { delay: number } & (
+  | { kind: 'thunder' }
   | { kind: 'combo' }
   | { kind: 'stone'; action: keyof typeof STONE_SOUNDS }
   | { kind: 'match'; tile: Tile; length: number; multiplier: number }
@@ -30,16 +31,20 @@ export function turnSounds(last: NonNullable<Game['lastMove']>, before: [number,
   }
   let frameAt = start;
   for (const frame of last.frames) {
-    cues.push({ kind: 'stone', action: 'shatter', delay: frameAt });
+    cues.push({ kind: 'thunder', delay: frameAt });
+    const titleAt = frameAt + (animated ? FEEDBACK_TIMING.matchBlink : 0);
+    const burstAt = titleAt + (animated ? FEEDBACK_TIMING.matchTitle : 0);
+    cues.push({ kind: 'stone', action: 'shatter', delay: burstAt });
+    cues.push({ kind: 'stone', action: 'settle', delay: burstAt + FEEDBACK_TIMING.burst });
     const kinds = new Map<Tile, number>();
     for (const match of findMatches(frame.board)) kinds.set(match.tile, Math.max(kinds.get(match.tile) ?? 0, match.cells.length));
     let simultaneous = 0;
-    for (const [tile, length] of kinds) cues.push({ kind: 'match', tile, length, multiplier: frame.multiplier, delay: frameAt + simultaneous++ * 90 });
-    if (frame.multiplier > 1) cues.push({ kind: 'combo', delay: frameAt + FEEDBACK_TIMING.comboDelay });
+    for (const [tile, length] of kinds) cues.push({ kind: 'match', tile, length, multiplier: frame.multiplier, delay: titleAt + simultaneous++ * 90 });
+    if (frame.multiplier > 1) cues.push({ kind: 'combo', delay: burstAt + FEEDBACK_TIMING.comboDelay });
     const cleared = cloneBoard(frame.board);
     for (const [r, c] of frame.matches) cleared[r][c] = null;
-    if (hasFallingStones(cleared)) cues.push({ kind: 'stone', action: 'drop', delay: frameAt + step });
-    frameAt += step + (frame.multiplier > 1 ? FEEDBACK_TIMING.comboHold : 0);
+    if (hasFallingStones(cleared)) cues.push({ kind: 'stone', action: 'drop', delay: burstAt + step });
+    frameAt = burstAt + step + (frame.multiplier > 1 ? FEEDBACK_TIMING.comboHold : 0);
   }
   const delta = lamaCounts(after)[you] - lamaCounts(before)[you];
   if (delta !== 0) {

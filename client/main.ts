@@ -52,9 +52,9 @@ app.innerHTML = `
       <div id="reconnecting" class="reconnect-banner" role="status" hidden>Verbindung unterbrochen. Dein Platz bleibt reserviert; wir verbinden dich erneut …</div>
       <div class="retro-game-caption" aria-hidden="true">SLIDE-A-LLAMA <small>CLASSIC FRUITS</small></div><div class="player-row"><div class="player player-zero" id="player-0"></div><div class="versus">VS</div><div class="player player-one" id="player-1"></div></div>
       <div class="turn-line"><span id="turn-label">Ein kleines Duell wartet auf dich.</span></div>
-      <div class="temple-stage"><div class="board-scene"><img class="retro-temple" src="/retro/temple.png" alt="" draggable="false"/><div class="temple-top"><span>◆</span><i></i><span>◆</span></div><div class="board-controls" id="board-controls"></div><div class="board-effects" id="board-effects" aria-hidden="true"></div><div class="temple-foreground" aria-hidden="true"><img class="temple-pillar-left" src="/retro/temple.png" alt=""/><img class="temple-pillar-right" src="/retro/temple.png" alt=""/></div><div id="insertion-preview" class="insertion-preview" aria-hidden="true" hidden></div><div class="board-overlay" id="board-overlay"><span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere Paco heraus.</p></div></div>
-      <div class="tile-queue"><div class="wheel-window"><div class="queue-wheel" id="queue-wheel" role="group" aria-label="Stein-Drehrad, der kommende Stein steht links unten, danach aufwärts"><div class="wheel-plate" aria-hidden="true"><i></i><b>&#9670;</b></div><div class="current-tile"><span>JETZT</span><div id="current-tile"></div></div><div class="next-tiles"><span>DANACH</span><div id="next-tiles"></div></div></div></div><div class="queue-hint" id="queue-hint">Einsetzen.<br/><strong>Überraschen.</strong></div></div>
-      <div class="herd"><div id="herd-llamas" class="herd-llamas"></div><div class="turn-counter" id="turn-counter" data-team="0" role="timer" aria-live="off"><span class="turn-counter-left" aria-hidden="true">${arrow('left')}</span><b id="timer">30</b><span class="turn-counter-right" aria-hidden="true">${arrow('right')}</span></div><p id="herd-caption">60 Punkte Vorsprung = ein Lama für dich.</p></div>
+      <div class="temple-stage"><div class="board-scene"><img class="retro-temple" src="/retro/temple.png" alt="" draggable="false"/><div class="temple-top"><span>◆</span><i></i><span>◆</span></div><div class="board-controls" id="board-controls"></div><div class="board-effects" id="board-effects" aria-hidden="true"></div><div class="temple-foreground" aria-hidden="true"><img class="temple-pillar-left" src="/retro/temple.png" alt=""/><img class="temple-pillar-right" src="/retro/temple.png" alt=""/></div><div id="insertion-preview" class="insertion-preview" aria-hidden="true" hidden></div><div class="turn-counter" id="turn-counter" data-team="0" role="timer" aria-live="off"><span class="turn-counter-left" aria-hidden="true">${arrow('left')}</span><b id="timer">30</b><span class="turn-counter-right" aria-hidden="true">${arrow('right')}</span></div><div class="board-overlay" id="board-overlay"><span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere Paco heraus.</p></div></div>
+      <div class="tile-queue"><div class="wheel-window"><div class="queue-wheel" id="queue-wheel" role="group" aria-label="Stein-Drehrad, der kommende Stein steht links unten, danach aufwärts"><div class="wheel-plate" aria-hidden="true"><i></i><b>&#9670;</b></div><div class="current-tile"><div id="current-tile"></div></div><div class="next-tiles"><span>DANACH</span><div id="next-tiles"></div></div></div></div><div class="queue-hint" id="queue-hint">Einsetzen.<br/><strong>Überraschen.</strong></div></div>
+      <div class="herd"><div id="herd-llamas" class="herd-llamas"></div><p id="herd-caption">60 Punkte Vorsprung = ein Lama für dich.</p></div>
       </div><div class="move-feedback" id="move-feedback" aria-live="polite">Drei gleiche Früchte. Ein ziemlich guter Anfang.</div>
       <div id="result" class="result" role="dialog" aria-modal="true" aria-labelledby="result-heading" hidden></div>
       <button id="resign" class="text-button resign" hidden>Partie aufgeben</button>
@@ -201,7 +201,7 @@ function receive(message: ServerMessage) {
 function renderPlayers() {
   for (const seat of [0, 1] as const) {
     const p = state?.players[seat];
-    $(`player-${seat}`).innerHTML = `<div class="avatar">${llama(seat === 0 ? '#efe2c8' : '#dfd5bf', seat === 0 ? '#d57850' : '#6c9689')}</div><div class="player-info"><span>${state ? (state.you === seat ? 'DU' : p?.bot ? 'TRAININGSPARTNER' : 'GEGENÜBER') : seat === 0 ? 'DEINE SEITE' : 'DIE ANDERE SEITE'}</span><strong>${escape(p?.name ?? (seat === 0 ? 'Du' : 'Freier Platz'))}</strong><small class="${p && !p.connected ? 'offline' : ''}">${p ? (p.bot ? 'Denkt gern zwei Schritte weiter' : p.connected ? '● Online' : '○ Verbindung unterbrochen') : 'Bereit für einen guten Zug'}</small></div><b class="score">${state?.game.scores[seat] ?? 0}<small>PKT</small></b>`;
+    $(`player-${seat}`).innerHTML = `<div class="avatar">${llama(seat === 0 ? '#efe2c8' : '#dfd5bf', seat === 0 ? '#d57850' : '#6c9689')}</div><div class="player-info"><span>${state ? (state.you === seat ? 'DU' : p?.bot ? 'TRAININGSPARTNER' : 'GEGENÜBER') : seat === 0 ? 'DEINE SEITE' : 'DIE ANDERE SEITE'}</span><strong>${escape(p?.name ?? (seat === 0 ? 'Du' : 'Freier Platz'))}</strong><small class="${p && !p.connected ? 'offline' : ''}">${p ? (p.bot ? 'Denkt gern zwei Schritte weiter' : p.connected ? '● Online' : '○ Verbindung unterbrochen') : 'Bereit für einen guten Zug'}</small></div><b class="score">${String(state?.game.scores[seat] ?? 0).padStart(4, '0')}</b>`;
     $(`player-${seat}`).classList.toggle('active', !!state && state.game.turn === seat && state.phase === 'playing');
   }
 }
@@ -220,6 +220,40 @@ function updateInsertionPreview() {
   if (preview.dataset.tile !== tile) { preview.dataset.tile = tile; preview.innerHTML = `<span class="tile stone-0">${fruit(tile)}</span>`; }
   preview.hidden = false;
 }
+const pointerSlots = () => matchMedia('(min-width:681px) and (hover:hover) and (pointer:fine)').matches;
+function selectInsertion(move?: string) {
+  activeInsertion = move;
+  $('board-controls').querySelectorAll<HTMLElement>('[data-move]').forEach(button => button.classList.toggle('active-arrow', button.dataset.move === move));
+  // The swinging stone is the visual indicator; keep the board itself quiet.
+  $('board-controls').querySelectorAll('.preview').forEach(cell => cell.classList.remove('preview'));
+  updateInsertionPreview();
+}
+function insertionAt(x: number, y: number): string | undefined {
+  const tiles = [...$('board-controls').querySelectorAll<HTMLElement>(':scope>.tile')];
+  if (!tiles.length) return;
+  const first = tiles[0].getBoundingClientRect(), last = tiles.at(-1)!.getBoundingClientRect();
+  const bounds = $('board-controls').getBoundingClientRect();
+  if (x < bounds.left || x > bounds.right || y < bounds.top || y > last.bottom) return;
+  const width = last.right - first.left, height = last.bottom - first.top;
+  const distances = [Math.abs(x - first.left), Math.abs(x - last.right), Math.abs(y - first.top)];
+  const nearest = Math.min(...distances);
+  // Only the outer half of the board chooses slots. Equidistant seams are neutral.
+  if (x >= first.left && x <= last.right && y >= first.top && nearest > Math.min(width, height) * .3) return;
+  if (distances.filter(distance => Math.abs(distance - nearest) < 3).length > 1) return;
+  const lane = (position: number, start: number, extent: number) => Math.max(0, Math.min(4, Math.floor((position - start) / extent * 5)));
+  return distances[2] === nearest ? `top:${lane(x, first.left, width)}` : `${distances[0] === nearest ? 'left' : 'right'}:${lane(y, first.top, height)}`;
+}
+$('board-controls').addEventListener('pointermove', event => {
+  if (!pointerSlots() || event.pointerType === 'touch') return;
+  const target = (event.target as Element).closest<HTMLButtonElement>('[data-move]');
+  selectInsertion(target?.dataset.move ?? insertionAt(event.clientX, event.clientY));
+});
+$('board-controls').addEventListener('pointerleave', () => { if (pointerSlots()) selectInsertion(); });
+$('board-controls').addEventListener('click', event => {
+  if (!pointerSlots() || (event.target as Element).closest('button')) return;
+  const move = insertionAt(event.clientX, event.clientY);
+  if (move) { const [side, lane] = move.split(':'); makeMove({ side: side as Move['side'], lane: Number(lane) }); }
+});
 window.addEventListener('resize', () => updateInsertionPreview());
 function scheduleLamaIdle() {
   setTimeout(() => {
@@ -244,11 +278,7 @@ function renderBoard(board: Board, matches: [number, number][] = []) {
   $('board-controls').querySelectorAll<HTMLButtonElement>('button').forEach(b => {
     b.onclick = () => { const [side, lane] = b.dataset.move!.split(':'); makeMove({ side: side as Move['side'], lane: +lane }); };
     const highlight = (on: boolean) => {
-      if (on) $('board-controls').querySelectorAll('.active-arrow').forEach(other => other.classList.remove('active-arrow'));
-      b.classList.toggle('active-arrow', on);
-      activeInsertion = on ? b.dataset.move : undefined; updateInsertionPreview();
-      const [side, lane] = b.dataset.move!.split(':');
-      $('board-controls').querySelectorAll<HTMLElement>('.tile').forEach(cell => cell.classList.toggle('preview', on && !b.disabled && (side === 'top' ? cell.dataset.col : cell.dataset.row) === lane));
+      selectInsertion(on ? b.dataset.move : undefined);
     };
     b.onpointerenter = () => highlight(true); b.onpointerleave = () => highlight(false); b.onfocus = () => highlight(true); b.onblur = () => highlight(false);
   });
@@ -326,6 +356,13 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
   }
   for (const frame of snapshot.game.lastMove!.frames) {
     if (generation !== animationGeneration) return;
+    renderBoard(frame.board); scene.dataset.motionPhase = 'recognizing';
+    await boardFeedback.blinkMatches(frame);
+    if (generation !== animationGeneration) return;
+    scene.dataset.motionPhase = 'announcing'; boardFeedback.announceMatch(frame);
+    await new Promise(r => setTimeout(r, FEEDBACK_TIMING.matchTitle));
+    if (generation !== animationGeneration) return;
+    scene.dataset.motionPhase = 'bursting';
     renderBoard(frame.board, frame.matches);
     boardFeedback.burst(frame, snapshot.game.lastMove!.seat === snapshot.you);
     $('move-feedback').textContent = `+${frame.points} Punkte${frame.multiplier > 1 ? '' : ' · Gute Kombination!'}`;
@@ -470,7 +507,7 @@ function renderStatus() {
       if (fresh) $('result-heading').focus({ preventScroll: true });
       if (resultRevealPending) {
         resultRevealPending = false;
-        if (won) audio.play('win');
+        audio.playResult(won);
         animateElement($('result').querySelector('.result-card')!, [{ transform: 'translateY(12px) scale(.96)' }, { transform: 'none' }], 700);
       }
     }
