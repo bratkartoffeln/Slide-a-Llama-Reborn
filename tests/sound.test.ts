@@ -55,13 +55,26 @@ test('Full columns crush only the bottom stone and use original squeeze and burs
   const next = play(game, 0, { side: 'top', lane: 1 });
   const cues = turnSounds(next.lastMove!, game.scores, next.scores, 0, true, game.board);
   assert.ok(cues.some(c => c.kind === 'stone' && c.action === 'squeeze'));
-  assert.ok(cues.some(c => c.kind === 'stone' && c.action === 'burst' && c.delay === FEEDBACK_TIMING.insert));
+  assert.ok(cues.some(c => c.kind === 'stone' && c.action === 'burst' && c.delay === FEEDBACK_TIMING.crack));
   assert.equal(next.board[4][1], game.board[3][1]);
   const gap = empty(); gap[4][0] = 'bell';
   const withGap = { ...game, board: gap }; const dropped = play(withGap, 0, { side: 'top', lane: 0 });
   const gapCues = turnSounds(dropped.lastMove!, game.scores, dropped.scores, 0, true, gap);
   assert.ok(!gapCues.some(c => c.kind === 'stone' && (c.action === 'squeeze' || c.action === 'burst')));
-  assert.ok(gapCues.some(c => c.kind === 'stone' && c.action === 'drop' && c.delay === FEEDBACK_TIMING.insert));
+  assert.ok(gapCues.some(c => c.kind === 'stone' && c.action === 'drop' && c.delay === FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity));
+});
+
+test('Landing cues follow cracks and burst; repeated mechanical sounds are coalesced per turn', () => {
+  const game = newGame(() => .25); const next = play(game, 0, { side: 'top', lane: 0 }); const last = next.lastMove!;
+  const cues = turnSounds(last, game.scores, next.scores, 0, true, game.board);
+  const stone = cues.filter(cue => cue.kind === 'stone');
+  assert.equal(stone.find(c => c.action === 'drop')!.delay, FEEDBACK_TIMING.crack + FEEDBACK_TIMING.crush + FEEDBACK_TIMING.insert);
+  assert.equal(new Set(stone.map(c => c.action)).size, stone.length);
+  assert.equal(boardMotionMs(last, game.board) - boardMotionMs(last), FEEDBACK_TIMING.crack + FEEDBACK_TIMING.crush);
+  const gap = empty(); gap[4][0] = 'bell';
+  const free = { ...game, board: gap }; const fallen = play(free, 0, { side: 'top', lane: 0 });
+  const freeCues = turnSounds(fallen.lastMove!, free.scores, fallen.scores, 0, true, gap);
+  assert.ok(!freeCues.some(c => c.kind === 'stone' && c.delay === 0));
 });
 
 test('Server gate and original transfer sounds follow the slower stone and follower timeline', () => {

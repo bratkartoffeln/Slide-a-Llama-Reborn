@@ -1,5 +1,5 @@
 import { cloneBoard, findMatches, lamaCounts, push, type Board, type Game, type Seat, type Tile } from '../shared/game';
-import { FEEDBACK_TIMING, boardMotionMs } from '../shared/feedback';
+import { FEEDBACK_TIMING, boardMotionMs, crushMotionMs } from '../shared/feedback';
 export { FEEDBACK_TIMING } from '../shared/feedback';
 import type { STONE_SOUNDS } from './audio-catalog';
 
@@ -12,18 +12,19 @@ export type TurnSound = { delay: number } & (
 
 /** Follow resolved matches, including cascades of a different tile to the one inserted. */
 export function turnSounds(last: NonNullable<Game['lastMove']>, before: [number, number], after: [number, number], you: Seat, animated = true, previous?: Board): TurnSound[] {
-  const start = animated ? FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity : 0;
+  const lead = crushMotionMs(previous, last.move);
+  const start = animated ? lead + FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity : 0;
   const step = FEEDBACK_TIMING.burst + FEEDBACK_TIMING.fall;
-  const cues: TurnSound[] = [{ kind: 'stone', action: last.move.side === 'top' ? 'drop' : 'slide', delay: 0 }];
+  const cues: TurnSound[] = last.move.side === 'top' ? [] : [{ kind: 'stone', action: 'slide', delay: 0 }];
   const at = (time: number) => animated ? time : 0;
   if (previous) {
     const { side, lane } = last.move;
     const full = side === 'top' ? previous.every(row => row[lane] !== null) : previous[lane].every(cell => cell !== null);
     if (full) {
-      if (side === 'top') cues.push({ kind: 'stone', action: 'squeeze', delay: at(FEEDBACK_TIMING.insert * .5) });
-      cues.push({ kind: 'stone', action: 'burst', delay: at(FEEDBACK_TIMING.insert) });
+      if (side === 'top') cues.push({ kind: 'stone', action: 'squeeze', delay: 0 });
+      cues.push({ kind: 'stone', action: 'burst', delay: at(side === 'top' ? FEEDBACK_TIMING.crack : FEEDBACK_TIMING.insert) });
     }
-    if (hasFallingStones(push(previous, last.tile, last.move))) cues.push({ kind: 'stone', action: 'drop', delay: at(FEEDBACK_TIMING.insert) });
+    if (side === 'top' || hasFallingStones(push(previous, last.tile, last.move))) cues.push({ kind: 'stone', action: 'drop', delay: at(lead + FEEDBACK_TIMING.insert + (side === 'top' && full ? 0 : FEEDBACK_TIMING.gravity)) });
   }
   for (const [index, frame] of last.frames.entries()) {
     cues.push({ kind: 'stone', action: 'shatter', delay: at(start + index * step) });
@@ -34,14 +35,19 @@ export function turnSounds(last: NonNullable<Game['lastMove']>, before: [number,
     if (index === 1) cues.push({ kind: 'combo', delay: start + index * step });
     const cleared = cloneBoard(frame.board);
     for (const [r, c] of frame.matches) cleared[r][c] = null;
-    if (hasFallingStones(cleared)) cues.push({ kind: 'stone', action: 'drop', delay: at(start + index * step + FEEDBACK_TIMING.burst) });
+    if (hasFallingStones(cleared)) cues.push({ kind: 'stone', action: 'drop', delay: at(start + index * step + FEEDBACK_TIMING.burst + FEEDBACK_TIMING.fall) });
   }
   const delta = lamaCounts(after)[you] - lamaCounts(before)[you];
   if (delta !== 0) {
-    const transferAt = animated ? boardMotionMs(last) : 0;
+    const transferAt = animated ? boardMotionMs(last, previous) : 0;
     cues.push({ kind: 'voice', mood: delta > 0 ? 'happy' : 'angry', delay: transferAt });
   }
-  return cues.sort((a, b) => a.delay - b.delay);
+  const mechanical = new Set<string>();
+  return cues.sort((a, b) => a.delay - b.delay).filter(cue => {
+    if (cue.kind !== 'stone') return true;
+    if (mechanical.has(cue.action)) return false;
+    mechanical.add(cue.action); return true;
+  });
 }
 
 export function hasFallingStones(board: Board): boolean {

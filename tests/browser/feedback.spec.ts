@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { botMove, MOVES, play, TILES, type Game, type Tile } from '../../shared/game';
+import { botMove, MOVES, newGame, play, TILES, type Game, type Tile } from '../../shared/game';
 
 test('Resolved hits emit symbol sounds, stone fragments and exact points; followers move and react', async ({ browser }) => {
   test.setTimeout(90_000);
@@ -108,8 +108,18 @@ test('Herd blinks like the RPS figures and stops every idle motion when disabled
 
 test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone crush', async ({ page }) => {
   await page.addInitScript(() => {
-    Object.assign(window, { mechanicalSounds: [] });
-    HTMLMediaElement.prototype.play = function () { (window as any).mechanicalSounds.push(this.src); return Promise.resolve(); };
+    const times = { sliding: 0, drops: [] as number[] };
+    Object.assign(window, { mechanicalSounds: [], mechanicalTimes: times });
+    document.addEventListener('DOMContentLoaded', () => {
+      const scene = document.querySelector<HTMLElement>('.board-scene')!;
+      new MutationObserver(() => { if (scene.dataset.motionPhase === 'sliding') times.sliding = performance.now(); })
+        .observe(scene, { attributes: true, attributeFilter: ['data-motion-phase'] });
+    });
+    HTMLMediaElement.prototype.play = function () {
+      (window as any).mechanicalSounds.push(this.src);
+      if (this.src.endsWith('stone-drop-original.mp3')) times.drops.push(performance.now());
+      return Promise.resolve();
+    };
   });
   await page.goto('/');
   for (const id of ['theme-toggle', 'voices-toggle', 'sound', 'motion-toggle']) {
@@ -129,13 +139,67 @@ test('Hidden arrow targets, green ICQ toggles, rotating preview and bottom-stone
   await expect(page.locator('.move-button.active-arrow')).toHaveCount(1);
   await expect(target).toHaveCSS('opacity', '0');
   const next = await page.locator('#next-tiles>div').first().locator('img').getAttribute('src');
+  const rowBefore = await page.locator('#board-controls [data-row="1"][data-col="0"] img').getAttribute('src');
+  const wheelWindow = await page.locator('.wheel-window').boundingBox(), wheel = await page.locator('#queue-wheel').boundingBox();
+  expect(wheelWindow!.width).toBeLessThan(wheel!.width * .55);
   await target.click();
-  await expect(page.locator('.ejected-stone')).toHaveCount(1);
+  await expect(page.locator('.board-scene')).toHaveAttribute('data-motion-phase', 'cracking');
+  await expect(page.locator('.stone-cracks')).toHaveCount(1);
+  await expect(page.locator('#board-controls [data-row="1"][data-col="0"] img')).toHaveAttribute('src', rowBefore!);
   await expect.poll(() => page.locator('#queue-wheel').evaluate(el => el.getAnimations().some(animation => animation.playState === 'running'))).toBe(true);
+  await page.screenshot({ path: 'test-results/stone-cracking.png', fullPage: true });
+  await expect(page.locator('.board-scene')).toHaveAttribute('data-motion-phase', 'bursting');
+  await expect(page.locator('#board-controls [data-row="1"][data-col="0"] img')).toHaveAttribute('src', rowBefore!);
+  await expect(page.locator('.board-scene')).toHaveAttribute('data-motion-phase', 'sliding');
   await expect(page.locator('#current-tile img')).toHaveAttribute('src', next!);
   await expect.poll(() => page.evaluate(() => (window as any).mechanicalSounds.some((src: string) => src.endsWith('stone-burst.mp3')))).toBe(true);
   await expect(page.locator('.ejected-stone')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => (window as any).mechanicalSounds.filter((src: string) => src.endsWith('stone-drop-original.mp3')).length)).toBe(1);
+  const times = await page.evaluate(() => (window as any).mechanicalTimes);
+  expect(times.sliding).toBeGreaterThan(0);
+  expect(times.drops[0] - times.sliding).toBeGreaterThanOrEqual(300);
   await page.screenshot({ path: 'test-results/stone-wheel-retro.png', fullPage: true });
   await page.locator('#theme-toggle').click();
   await page.screenshot({ path: 'test-results/stone-wheel-modern.png', fullPage: true });
+});
+
+test('A top stone crosses an empty gap in one fall and plays its sound only on landing', async ({ page }) => {
+  let game = newGame(); game.board = Array.from({ length: 5 }, () => Array(5).fill(null));
+  game.board[4][0] = 'bell'; game.board[3][0] = 'lemon'; game.queue[0] = 'cherry';
+  await page.addInitScript(() => {
+    const records = { started: 0, calls: [] as any[], landed: [] as number[] };
+    Object.assign(window, { fallRecords: records });
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (frames, options) {
+      if (this.matches('#board-controls > .tile')) { records.started = performance.now(); records.calls.push({ frames, options }); }
+      return animate.call(this, frames, options);
+    };
+    HTMLMediaElement.prototype.play = function () {
+      if (this.src.endsWith('stone-drop-original.mp3')) records.landed.push(performance.now() - records.started);
+      return Promise.resolve();
+    };
+  });
+  await page.routeWebSocket('**/ws', socket => {
+    const snapshot = () => JSON.stringify({ type: 'snapshot', state: {
+      room: 'AABBCCDD', you: 0, players: [0, 1].map(seat => ({ name: seat ? 'Sam' : 'Alex', connected: true, bot: false, rematch: false, reconnectUntil: null })),
+      game, phase: 'playing', deadline: Date.now() + 30000, availableAt: 0, serverTime: Date.now(), turnSeconds: 30, round: 1, wins: [0, 0], endReason: null
+    } });
+    socket.onMessage(raw => {
+      const message = JSON.parse(String(raw));
+      if (message.type === 'create') {
+        socket.send(JSON.stringify({ type: 'welcome', room: 'AABBCCDD', token: 'test-session', seat: 0 }));
+        socket.send(snapshot()); socket.send(JSON.stringify({ type: 'chat', messages: [] }));
+      } else if (message.type === 'move') {
+        game = play(game, 0, message.move); socket.send(snapshot()); socket.send(snapshot());
+      }
+    });
+  });
+  await page.goto('/'); await page.locator('#name').fill('Alex'); await page.locator('#create').click();
+  await expect(page.locator('.move-button:enabled')).toHaveCount(15);
+  await page.locator('[data-move="top:0"]').click();
+  await expect.poll(() => page.evaluate(() => (window as any).fallRecords.landed.length)).toBe(1);
+  const records = await page.evaluate(() => (window as any).fallRecords);
+  expect(records.calls).toHaveLength(1); expect(records.calls[0].options.duration).toBe(540);
+  expect(records.calls[0].options.easing).toBe('linear'); expect(records.landed[0]).toBeGreaterThanOrEqual(500);
+  await expect(page.locator('.stone-cracks')).toHaveCount(0);
 });

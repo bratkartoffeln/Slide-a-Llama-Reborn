@@ -1,4 +1,4 @@
-# Retro-Recherche und Medien für 0.1.4
+# Retro-Recherche und Medien für 0.1.5
 
 Recherche und Abruf: 16.10.2026. Der Retro-Modus ist eine alternative Darstellung
 derselben Online-Partie. Das moderne Layout bleibt auswählbar.
@@ -122,6 +122,12 @@ Der Seitenwechsel beginnt nach den Steinkaskaden. Spiel und Server
 verwenden dieselbe Zeitleiste mit 330 ms Einschub, 210 ms Fall und 360 ms Bruch
 sowie 1900 ms für den Seitenwechsel. Zugbewegungen dauern doppelt so lang
 wie in 0.1.3; das kurze natürliche Blinzeln bleibt unverändert.
+
+Seit 0.1.5 geht bei voller Spalte eine Rissphase von 420 ms und eine Bruchphase
+von 360 ms voraus; erst danach verschiebt sich die Spalte. Freie Einschübe von
+oben laufen als durchgehender 540-ms-Fall. Fall-Sounds starten beim Landen.
+Identische mechanische Soundereignisse werden je Zug zusammengefasst; eine
+Kennung aus Raum, Runde und Revision verhindert doppelte Zugwiedergabe.
 
 Der separat ergänzte ICQ-Chatton `public/audio/icq-uh-oh.mp3` stammt von
 [Myinstants – ICQ Uh Oh](https://www.myinstants.com/es/instant/icq-uh-oh-46540/),

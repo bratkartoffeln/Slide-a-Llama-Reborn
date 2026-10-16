@@ -15,6 +15,7 @@ export class GameAudio {
   private variants = new SoundVariants();
   private generation = 0;
   private queue: SampleRequest[] = [];
+  private lastTurnId: string | undefined;
   enabled = false;
   voicesEnabled = true;
   playChat() { if (this.enabled) this.original(CHAT_SOUND, 'chat', .5, 'chat'); }
@@ -25,6 +26,7 @@ export class GameAudio {
     if (!enabled) for (const [sample, channel] of this.samples) if (channel === 'voice') this.stopSample(sample);
   }
   cancel() {
+    this.lastTurnId = undefined;
     this.generation++;
     this.queue = [];
     for (const timer of this.timers) clearTimeout(timer);
@@ -33,10 +35,12 @@ export class GameAudio {
     for (const oscillator of this.oscillators) { try { oscillator.stop(); } catch {} }
     this.oscillators.clear();
   }
-  playTurn(last: NonNullable<Game['lastMove']>, before: [number, number], after: [number, number], you: Seat, animated: boolean, previous: Board) {
+  playTurn(last: NonNullable<Game['lastMove']>, before: [number, number], after: [number, number], you: Seat, animated: boolean, previous: Board, turnId?: string) {
     // Let previous samples finish, including long original voices. Only leaving,
     // muting or hiding the game cancels playback and pending events.
     if (!this.enabled || document.hidden) return;
+    if (turnId && turnId === this.lastTurnId) return;
+    this.lastTurnId = turnId;
     const generation = this.generation;
     for (const cue of turnSounds(last, before, after, you, animated, previous)) {
       const timer = setTimeout(() => {

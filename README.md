@@ -1,6 +1,6 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.4** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.5** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
 Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
@@ -61,9 +61,13 @@ Punkte und Spielzustand bleiben gleich.
 Die Spielsteine haben unregelmäßige, abgeschlagene Tempelstein-Profile mit
 Sandsteinstruktur und sichtbarer Tiefe. Treffer zerlegen sie in Fragmente;
 die Punkte steigen direkt über der Kombination auf, bei Kaskaden mit Faktor.
+Ab dem zweiten Treffer der Kette steigt zusätzlich ein großer „COMBO ×2“,
+„COMBO ×3“, „COMBO ×4“ usw. mit den Punkten auf.
 Lichtblitz, Druckwelle, Staub und ein kurzes Rütteln verstärken den Bruch.
-Bei voller Spalte zerplatzt der unterste Stein, sobald ein neuer von oben
-eingeschoben wird. Die Vorschau sitzt auf einem animierten Drehrad.
+Bei voller Spalte bekommt zunächst der unterste Stein Risse und zerplatzt;
+erst danach rutscht der Stapel nach. In freien Spalten fällt der neue Stein
+ohne Zwischenstopp bis zu seinem Ziel. Der Fall-Sound erklingt beim Landen.
+Die Vorschau sitzt auf einem Drehrad, das rechts neben dem Tempel halb sichtbar ist.
 Nur der gerade gewählte Einschubpfeil ist sichtbar; alle Touchflächen bleiben erhalten.
 Die Lamas wechseln tatsächlich ihre Plätze, wippen beim Laufen und blinzeln
 im Stand mit voneinander unabhängigen Ruhebewegungen.
@@ -86,6 +90,11 @@ unabhängig voneinander. Zuganimationen laufen mit halber Geschwindigkeit;
 der Server wartet bis zum Ende der Stein- und Lama-Bewegungen. Neue Züge
 schneiden laufende Originalsounds nicht ab. Die Auswahl wird lokal gespeichert; beide Spieler
 wählen unabhängig voneinander.
+
+Identische mechanische Sounds spielen pro Zug nur einmal; wiederholte
+Zustandsmeldungen lösen keine zweite Wiedergabe aus. Nach Rundenende bleibt
+ein Gewinn-/Verlust-Overlay mit „Noch eine Runde?“ sichtbar, bis die nächste
+Runde beginnt. Alternativ lässt sich dort zum Startbildschirm zurückkehren.
 
 Bildquellen, Gameplay-Videos, Extraktion und Zuordnung der Medien:
 [RETRO-QUELLEN.md](RETRO-QUELLEN.md).

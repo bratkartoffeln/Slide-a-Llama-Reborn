@@ -80,9 +80,10 @@ export async function startServer(options: ServerOptions = {}) {
     if (room.phase !== 'playing' || !connected(room)) throw new Error('Warte, bis beide Spieler verbunden sind.');
     if (Date.now() < room.availableAt) throw new Error('Die Steine bewegen sich noch.');
     const beforeScores = room.game.scores;
+    const previousBoard = room.game.board;
     room.game = play(room.game, seat, input, gameRandom, automatic);
     room.touched = Date.now();
-    room.availableAt = Date.now() + (options.animationMs !== undefined ? Math.max(1, room.game.lastMove!.frames.length) * options.animationMs : turnMotionMs(room.game.lastMove!, beforeScores, room.game.scores));
+    room.availableAt = Date.now() + (options.animationMs !== undefined ? Math.max(1, room.game.lastMove!.frames.length) * options.animationMs : turnMotionMs(room.game.lastMove!, beforeScores, room.game.scores, previousBoard));
     if (room.game.winner !== null) { finish(room, room.game.winner, 'Alle zehn Lamas sind überzeugt!'); return; }
     room.deadline = room.availableAt + duration(room);
     room.botAt = room.availableAt + (options.botDelayMs ?? 1100); broadcast(room);

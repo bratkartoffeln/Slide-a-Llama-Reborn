@@ -4,6 +4,7 @@ import './feedback.css';
 import { fruit, llama, arrow } from './art';
 import { GameAudio } from './sound';
 import { FEEDBACK_TIMING } from './sound-events';
+import { crushesBottom } from '../shared/feedback';
 import { BoardFeedback } from './board-feedback';
 import { HerdMotion } from './herd-motion';
 import { Connection, roomCode, type ConnectionStatus } from './network';
@@ -49,11 +50,11 @@ app.innerHTML = `
       <div id="reconnecting" class="reconnect-banner" role="status" hidden>Verbindung unterbrochen. Dein Platz bleibt reserviert; wir verbinden dich erneut …</div>
       <div class="retro-game-caption" aria-hidden="true">SLIDE-A-LLAMA <small>CLASSIC FRUITS</small></div><div class="player-row"><div class="player player-zero" id="player-0"></div><div class="versus">VS</div><div class="player player-one" id="player-1"></div></div>
       <div class="turn-line"><span id="turn-label">Ein kleines Duell wartet auf dich.</span><span class="timer" id="timer">30<span>s</span></span></div><div class="timer-track"><span id="timer-fill"></span></div>
-      <div class="board-scene"><img class="retro-temple" src="/retro/temple.png" alt="" draggable="false"/><div class="temple-top"><span>◆</span><i></i><span>◆</span></div><div class="board-controls" id="board-controls"></div><div class="board-effects" id="board-effects" aria-hidden="true"></div><div class="board-overlay" id="board-overlay"><span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere Paco heraus.</p></div></div>
-      <div class="tile-queue"><div class="queue-wheel" id="queue-wheel" role="group" aria-label="Stein-Drehrad, danach im Uhrzeigersinn"><div class="wheel-plate" aria-hidden="true"><i></i><b>&#9670;</b></div><div class="current-tile"><span>JETZT</span><div id="current-tile"></div></div><div class="next-tiles"><span>DANACH</span><div id="next-tiles"></div></div></div><div class="queue-hint" id="queue-hint">Einsetzen.<br/><strong>Überraschen.</strong></div></div>
-      <div class="move-feedback" id="move-feedback" aria-live="polite">Drei gleiche Früchte. Ein ziemlich guter Anfang.</div>
+      <div class="temple-stage"><div class="board-scene"><img class="retro-temple" src="/retro/temple.png" alt="" draggable="false"/><div class="temple-top"><span>◆</span><i></i><span>◆</span></div><div class="board-controls" id="board-controls"></div><div class="board-effects" id="board-effects" aria-hidden="true"></div><div class="board-overlay" id="board-overlay"><span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere Paco heraus.</p></div></div>
+      <div class="tile-queue"><div class="wheel-window"><div class="queue-wheel" id="queue-wheel" role="group" aria-label="Stein-Drehrad, danach im Uhrzeigersinn"><div class="wheel-plate" aria-hidden="true"><i></i><b>&#9670;</b></div><div class="current-tile"><span>JETZT</span><div id="current-tile"></div></div><div class="next-tiles"><span>DANACH</span><div id="next-tiles"></div></div></div></div><div class="queue-hint" id="queue-hint">Einsetzen.<br/><strong>Überraschen.</strong></div></div>
+      </div><div class="move-feedback" id="move-feedback" aria-live="polite">Drei gleiche Früchte. Ein ziemlich guter Anfang.</div>
       <div class="herd"><div class="herd-top"><span>DEINE LAMAS <b id="lamas-0">5</b></span><span><b id="lamas-1">5</b> GEGENSEITE</span></div><div id="herd-llamas" class="herd-llamas"></div><div class="lead-track"><span id="lead-fill"></span><i></i></div><p id="herd-caption">60 Punkte Vorsprung = ein Lama für dich.</p></div>
-      <div id="result" class="result" hidden></div>
+      <div id="result" class="result" role="dialog" aria-modal="true" aria-labelledby="result-heading" hidden></div>
       <button id="resign" class="text-button resign" hidden>Partie aufgeben</button>
     </section>
     <aside class="panel chat-panel" id="chat-panel"><div class="chat-heading"><div><span class="chat-icon">☷</span><h3>Am Spieltisch</h3></div><span id="chat-count">CHAT</span></div><p class="chat-subtitle" id="chat-subtitle">Gute Züge verdienen einen Kommentar.</p><div class="chat-messages" id="messages" role="log" aria-label="Raumchat" aria-live="polite"><div class="chat-empty">${llama('#e8e0cd','#739083')}<p>Ein „Hallo“ gehört dazu.</p><span>Hier ist Platz für eure Nachrichten,<br/>kleine Sticheleien und große Pläne.</span></div></div><button id="new-messages" class="unread" hidden>Neue Nachrichten ↓</button><div class="quick-chat"><button data-quick="Hallo! 👋" disabled>Hallo! 👋</button><button data-quick="Guter Zug! ✨" disabled>Guter Zug! ✨</button><button data-quick="Revanche? 🦙" disabled>Revanche? 🦙</button></div><form id="chat-form"><label class="sr-only" for="chat-input">Deine Nachricht</label><div class="chat-compose"><input id="chat-input" placeholder="Deine Nachricht …" maxlength="600" autocomplete="off" disabled/><button aria-label="Nachricht senden" id="send-chat" disabled>${arrow('right')}</button></div><span class="chat-footnote">Nur für euch beide. <span id="chat-length">0/300</span></span></form></aside>
@@ -166,10 +167,10 @@ function receive(message: ServerMessage) {
       renderedRevision = state.game.revision;
       if (moved && motionEnabled()) void animateMove(state, previous.game.board);
       else { cancelVisuals(); renderBoard(state.game.board); renderHerd(); }
-      if (moved) audio.playTurn(state.game.lastMove!, previous.game.scores, state.game.scores, state.you, motionEnabled(), previous.game.board);
+      if (moved) audio.playTurn(state.game.lastMove!, previous.game.scores, state.game.scores, state.you, motionEnabled(), previous.game.board, `${state.room}:${state.round}:${state.game.revision}`);
       else audio.cancel();
       if (previous && state.phase === 'finished' && previous.phase !== 'finished' && state.game.winner === state.you) {
-        audio.play('win'); animateElement($('result'), [{ transform: 'translateY(12px) scale(.96)', opacity: .4 }, { transform: 'none', opacity: 1 }], 1000);
+        audio.play('win'); animateElement($('result').querySelector('.result-card')!, [{ transform: 'scale(.96)' }, { transform: 'none' }], 1000);
       }
     }
     if (state.phase === 'paused') audio.cancel();
@@ -227,9 +228,9 @@ function renderBoard(board: Board, matches: [number, number][] = []) {
 function moveButton(side: Move['side'], lane: number, row: number, col: number) {
   return `<button class="move-button ${side}" data-move="${side}:${lane}" style="grid-row:${row};grid-column:${col}" aria-label="${side === 'top' ? 'Spalte' : 'Zeile'} ${lane + 1} von ${side === 'top' ? 'oben' : side === 'left' ? 'links' : 'rechts'} einschieben" disabled>${arrow(side === 'top' ? 'down' : side === 'left' ? 'right' : 'left')}</button>`;
 }
-function animateElement(element: Element, frames: Keyframe[], duration: number) {
+function animateElement(element: Element, frames: Keyframe[], duration: number, easing = 'cubic-bezier(.45,0,.3,1)') {
   if (!motionEnabled()) return;
-  const animation = element.animate(frames, { duration, easing: 'cubic-bezier(.45,0,.3,1)' });
+  const animation = element.animate(frames, { duration, easing });
   activeAnimations.add(animation);
   void animation.finished.catch(() => {}).finally(() => activeAnimations.delete(animation));
 }
@@ -247,11 +248,32 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
   const generation = ++animationGeneration; animating = true;
   const last = snapshot.game.lastMove!;
   const pushed = push(previous, last.tile, last.move);
-  boardFeedback.eject(previous, last.move);
-  renderBoard(pushed);
+  const scene = $('board-controls').parentElement!;
+  const crush = crushesBottom(previous, last.move);
+  if (crush) {
+    renderBoard(previous); scene.dataset.motionPhase = 'cracking';
+    boardFeedback.crackBottom(previous, last.move.lane, last.tile);
+    await new Promise(r => setTimeout(r, FEEDBACK_TIMING.crack));
+    if (generation !== animationGeneration) return;
+    scene.dataset.motionPhase = 'bursting';
+    renderBoard(previous, [[4, last.move.lane]]);
+    boardFeedback.burst({ board: previous, matches: [[4, last.move.lane]], points: 0, multiplier: 1 }, true, false);
+    await new Promise(r => setTimeout(r, FEEDBACK_TIMING.crush));
+    if (generation !== animationGeneration) return;
+    boardFeedback.releaseWaitingStone();
+  } else if (last.move.side !== 'top') boardFeedback.eject(previous, last.move);
+  const directFall = last.move.side === 'top' && !crush;
+  scene.dataset.motionPhase = 'sliding';
+  renderBoard(directFall ? insert(previous, last.tile, last.move) : pushed);
   const size = $('board-controls').querySelector('.tile')!.getBoundingClientRect().width + (retro ? 2 : 5);
   const { side, lane } = last.move;
-  if (side === 'top') {
+  if (directFall) {
+    const destination = 4 - previous.filter(row => row[lane] !== null).length;
+    animateElement($('board-controls').querySelector(`[data-row="${destination}"][data-col="${lane}"]`)!, [
+      { transform: `translateY(-${(destination + 1) * size}px)`, offset: 0, easing: 'cubic-bezier(.55,0,1,.65)' },
+      { transform: 'translateY(2px) scale(1.025,.96)', offset: .96 }, { transform: 'none' }
+    ], FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity, 'linear');
+  } else if (side === 'top') {
     for (let r = 0; r < 5; r++) {
       const cell = $('board-controls').querySelector(`[data-row="${r}"][data-col="${lane}"]`)!;
       animateElement(cell, [{ transform: `translateY(-${size}px)` }, { transform: 'translateY(2px) scaleY(.98)', offset: .88 }, { transform: 'none' }], 320);
@@ -264,10 +286,13 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
       if (previous[lane][c] === null) break;
     }
   }
-  await new Promise(r => setTimeout(r, FEEDBACK_TIMING.insert));
-  if (generation !== animationGeneration) return;
-  renderBoard(insert(previous, last.tile, last.move)); fallingPieces(pushed, 200);
-  await new Promise(r => setTimeout(r, FEEDBACK_TIMING.gravity));
+  if (directFall) await new Promise(r => setTimeout(r, FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity));
+  else {
+    await new Promise(r => setTimeout(r, FEEDBACK_TIMING.insert));
+    if (generation !== animationGeneration) return;
+    renderBoard(insert(previous, last.tile, last.move)); fallingPieces(pushed, 200);
+    await new Promise(r => setTimeout(r, FEEDBACK_TIMING.gravity));
+  }
   for (const frame of snapshot.game.lastMove!.frames) {
     if (generation !== animationGeneration) return;
     renderBoard(frame.board, frame.matches);
@@ -286,6 +311,7 @@ async function animateMove(snapshot: Snapshot, previous: Board) {
   if ($('herd-llamas').querySelector('.is-crossing')) await new Promise(r => setTimeout(r, FEEDBACK_TIMING.transfer));
   if (generation !== animationGeneration) return;
   animating = false; renderStatus(); updateControls();
+  delete scene.dataset.motionPhase;
 }
 function makeMove(move: Move) {
   if (!state || !canMove()) return;
@@ -310,8 +336,8 @@ function renderQueue(advance = false) {
   $('current-tile').innerHTML = fruit(queue[0]); $('next-tiles').innerHTML = queue.slice(1).map(t => `<div title="${tileName(t)}">${fruit(t)}</div>`).join('');
   $('current-tile').setAttribute('aria-label', 'Aktueller Stein: ' + tileName(queue[0]));
   if (advance) {
-    animateElement($('queue-wheel'), [{ rotate: '90deg' }, { rotate: '0deg' }], 660);
-    $('queue-wheel').querySelectorAll('.tile-art').forEach(art => animateElement(art, [{ rotate: '-90deg' }, { rotate: '0deg' }], 660));
+    animateElement($('queue-wheel'), [{ rotate: '-45deg' }, { rotate: '0deg' }], 660);
+    $('queue-wheel').querySelectorAll('.tile-art').forEach(art => animateElement(art, [{ rotate: '45deg' }, { rotate: '0deg' }], 660));
   }
 }
 function renderHerd(previous?: [number, number]) {
@@ -343,12 +369,24 @@ function renderStatus() {
     $('result').hidden = state.phase !== 'finished';
     if (state.phase === 'finished') {
       const winner = state.game.winner!;
-      $('result').innerHTML = `<span class="eyebrow">RUNDE ${state.round} · ${state.game.scores.join(' : ')}</span><h3>${winner === state.you ? 'Die Herde feiert dich!' : `${escape(state.players[winner]?.name ?? 'Dein Gegenüber')} gewinnt!`}</h3><p>${escape(state.endReason ?? '')}</p><button class="button primary" id="rematch" ${state.players[state.you]?.rematch ? 'disabled' : ''}>${state.players[state.you]?.rematch ? 'Warte auf dein Gegenüber …' : state.players[winner === 0 ? 1 : 0]?.rematch ? 'Revanche annehmen ↗' : 'Noch eine Runde? ↗'}</button>`;
+      const won = winner === state.you;
+      const focusResult = !document.querySelector('#result .result-card') || $('result').contains(document.activeElement);
+      $('result').dataset.outcome = won ? 'won' : 'lost';
+      $('result').innerHTML = `<div class="result-card"><span class="result-emblem" aria-hidden="true">${won ? '✦' : '◇'}</span><span class="eyebrow">RUNDE ${state.round} · ${state.game.scores.join(' : ')}</span><h2 id="result-heading" tabindex="-1">${won ? 'Gewonnen!' : 'Verloren!'}</h2><h3>${won ? 'Die Herde feiert dich!' : `${escape(state.players[winner]?.name ?? 'Dein Gegenüber')} gewinnt!`}</h3><p>${escape(state.endReason ?? '')}</p><button class="button primary" id="rematch" ${state.players[state.you]?.rematch ? 'disabled' : ''}>${state.players[state.you]?.rematch ? 'Warte auf dein Gegenüber …' : state.players[winner === 0 ? 1 : 0]?.rematch ? 'Revanche annehmen ↗' : 'Noch eine Runde? ↗'}</button><button class="button secondary" id="result-leave">Zum Startbildschirm</button></div>`;
       $('rematch').onclick = () => connection.send({ type: 'rematch' });
+      $('result-leave').onclick = () => $('leave').click();
+      if (focusResult) $('result-heading').focus({ preventScroll: true });
     }
   }
   tick();
 }
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Tab' || $('result').hidden || document.querySelector('dialog[open]')) return;
+  const buttons = [...$('result').querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+  const first = buttons[0], last = buttons.at(-1);
+  if (event.shiftKey && (document.activeElement === first || document.activeElement === $('result-heading'))) { event.preventDefault(); last?.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+});
 function tick() {
   const total = state?.turnSeconds ?? 30;
   const remaining = state?.deadline ? Math.max(0, (state.deadline - Date.now() - clockOffset) / 1000) : total;

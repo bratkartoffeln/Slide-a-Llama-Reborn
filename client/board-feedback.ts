@@ -9,6 +9,23 @@ export class BoardFeedback {
   clear() {
     for (const animation of this.animations) animation.cancel();
     this.animations.clear(); this.layer.replaceChildren();
+    this.scene.querySelectorAll('.stone-cracks').forEach(element => element.remove());
+    this.scene.querySelectorAll('.cracking').forEach(element => element.classList.remove('cracking'));
+    delete this.scene.dataset.motionPhase;
+  }
+  crackBottom(board: Board, lane: number, tile: NonNullable<Board[number][number]>) {
+    if (!this.enabled()) return;
+    const source = this.scene.querySelector<HTMLElement>(`#board-controls [data-row="4"][data-col="${lane}"]`)!;
+    source.classList.add('cracking');
+    source.insertAdjacentHTML('beforeend', '<svg class="stone-cracks" viewBox="0 0 100 100" aria-hidden="true"><path d="M48 0 43 25 59 40 40 60 48 80 37 100 M59 40 82 30 100 37 M40 60 17 48 0 55 M48 80 73 68 98 78"/></svg>');
+    const top = this.scene.querySelector<HTMLElement>(`#board-controls [data-row="0"][data-col="${lane}"]`)!.getBoundingClientRect();
+    const bounds = this.scene.getBoundingClientRect(), waiting = document.createElement('span');
+    waiting.className = 'waiting-stone';
+    Object.assign(waiting.style, { left: top.left - bounds.left + 'px', top: top.top - bounds.top - top.height - 2 + 'px', width: top.width + 'px', height: top.height + 'px' });
+    waiting.innerHTML = `<span class="tile">${fruit(tile)}</span>`; this.layer.append(waiting);
+  }
+  releaseWaitingStone() {
+    this.layer.querySelectorAll('.waiting-stone').forEach(element => element.remove());
   }
   eject(board: Board, move: Move) {
     if (!this.enabled()) return;
@@ -68,7 +85,7 @@ export class BoardFeedback {
     popup.dataset.points = String(frame.points); popup.dataset.multiplier = String(frame.multiplier);
     popup.style.left = Math.max(65, Math.min(bounds.width - 65, centerX / frame.matches.length)) + 'px';
     popup.style.top = Math.max(45, centerY / frame.matches.length - 8) + 'px';
-    popup.innerHTML = `<strong>+${frame.points}</strong>${frame.multiplier > 1 ? `<small>KASKADE ×${frame.multiplier}</small>` : ''}`;
+    popup.innerHTML = `<strong>+${frame.points}</strong>${frame.multiplier > 1 ? `<span class="combo-factor"><small>COMBO</small><b>×${frame.multiplier}</b></span>` : ''}`;
     this.layer.append(popup);
     this.animate(popup, [{ transform: 'translate(-50%,-30%) scale(.65)', opacity: 0 }, { transform: 'translate(-50%,-60%) scale(1.15)', opacity: 1, offset: .18 }, { transform: 'translate(-50%,-85%) scale(1)', opacity: 1, offset: .65 }, { transform: 'translate(-50%,-150%) scale(.95)', opacity: 0 }], 2000);
   }
