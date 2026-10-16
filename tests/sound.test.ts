@@ -2,11 +2,33 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { turnSounds, SoundVariants, FEEDBACK_TIMING } from '../client/sound-events';
-import { boardMotionMs, turnMotionMs, sideEjectImpactMs } from '../shared/feedback';
+import { burstPlan, comboDelayMs, comboFactor, boardMotionMs, turnMotionMs, sideEjectImpactMs, frameFallMs, gravityPlan, gravityMotionMs, gravityImpactMs } from '../shared/feedback';
 import { MATCH_SOUNDS, ORIGINAL_SOUND_FILES } from '../client/audio-catalog';
-import { newGame, play, type Board } from '../shared/game';
+import { newGame, play, resolve, TILES, type Board } from '../shared/game';
 
 const empty = (): Board => Array.from({ length: 5 }, () => Array(5).fill(null));
+test('Falling stones use constant acceleration, distance-dependent flight and a landing before turn release', () => {
+  const board = empty(); board[3][0] = 'bell'; board[0][1] = 'lemon';
+  const [short, long] = gravityPlan(board);
+  assert.equal(short.cells, 1); assert.equal(long.cells, 4);
+  assert.equal(short.flight, 320); assert.equal(long.flight, short.flight * 2);
+  assert.equal(short.duration - short.flight, 120); assert.equal(long.duration - long.flight, 120);
+  assert.equal(gravityMotionMs(board), 760); assert.equal(gravityImpactMs(board), 640);
+  const game = newGame(); game.board = empty(); game.board[0][0] = 'bell'; game.queue[0] = 'cherry';
+  const next = play(game, 0, { side: 'left', lane: 0 });
+  const drop = turnSounds(next.lastMove!, game.scores, next.scores, 0, true, game.board).find(cue => cue.kind === 'stone' && cue.action === 'drop')!;
+  assert.equal(drop.delay, FEEDBACK_TIMING.insert + 640);
+  assert.equal(boardMotionMs(next.lastMove!, game.board), drop.delay + 120);
+});
+test('Two simultaneous rows trigger the Combo sound and hold even in the first cascade', () => {
+  const board = empty(); board[4] = ['cherry', 'cherry', 'cherry', null, null]; board[3] = ['lemon', 'lemon', 'lemon', null, null];
+  const frame = resolve(board).frames[0];
+  assert.equal(frame.multiplier, 1); assert.equal(comboFactor(frame), 2);
+  const game = newGame(), last = play(game, 0, { side: 'top', lane: 0 }).lastMove!; last.frames = [frame];
+  const cues = turnSounds(last, [0, 0], [30, 0], 0);
+  assert.equal(cues.filter(cue => cue.kind === 'combo').length, 1);
+  assert.equal(boardMotionMs(last), FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity + FEEDBACK_TIMING.matchBlink + FEEDBACK_TIMING.matchTitle + burstPlan(frame).duration + FEEDBACK_TIMING.fall + FEEDBACK_TIMING.comboHold);
+});
 test('Sounds follow the resolved symbols in every cascade instead of the inserted tile', () => {
   const game = newGame(); game.board = empty();
   game.board[4] = ['cherry', 'cherry', null, 'lemon', 'lemon']; game.board[3][2] = 'lemon';
@@ -55,19 +77,33 @@ test('Combo accents follow the hit, finish before the next cascade and postpone 
   game.board[4] = ['cherry', 'cherry', null, 'lemon', 'lemon']; game.board[3][2] = 'lemon'; game.queue[0] = 'cherry';
   const last = play(game, 0, { side: 'left', lane: 4 }).lastMove!;
   last.frames.push({ ...last.frames[1], multiplier: 3 });
-  const step = FEEDBACK_TIMING.matchBlink + FEEDBACK_TIMING.matchTitle + FEEDBACK_TIMING.burst + FEEDBACK_TIMING.fall;
-  assert.equal(boardMotionMs(last), FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity + 3 * step + 2 * FEEDBACK_TIMING.comboHold);
+  const steps = last.frames.reduce((sum, frame) => sum + FEEDBACK_TIMING.matchBlink + FEEDBACK_TIMING.matchTitle + burstPlan(frame).duration + frameFallMs(frame), 0);
+  assert.equal(boardMotionMs(last), FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity + steps + 2 * FEEDBACK_TIMING.comboHold);
   for (const animated of [true, false]) {
     const cues = turnSounds(last, [50, 0], [80, 0], 0, animated);
     const combos = cues.filter(cue => cue.kind === 'combo');
     assert.equal(combos.length, 2);
     for (const [index, combo] of combos.entries()) {
       const hit = cues.find(cue => cue.kind === 'match' && cue.multiplier === index + 2)!;
-      assert.equal(combo.delay - hit.delay, FEEDBACK_TIMING.comboDelay + (animated ? FEEDBACK_TIMING.matchTitle : 0));
+      assert.equal(combo.delay - hit.delay, animated ? comboDelayMs(last.frames[index + 1]) + FEEDBACK_TIMING.matchTitle : FEEDBACK_TIMING.comboDelay);
       const following = index === 0 ? cues.find(cue => cue.kind === 'match' && cue.multiplier === 3)! : cues.find(cue => cue.kind === 'voice')!;
       assert.ok(following.delay >= combo.delay + 1430, 'Original combo sample must finish before the next cascade or transfer');
     }
   }
+});
+test('Burst variations are deterministic, stagger only along matching lines, and wait for the last blast', () => {
+  const styles = new Set<string>();
+  for (const tile of TILES) for (const length of [3, 4, 5]) {
+    const board = empty(); for (let col = 0; col < length; col++) board[4][col] = tile;
+    const frame = resolve(board).frames[0], plan = burstPlan(frame);
+    assert.deepEqual(plan, burstPlan(JSON.parse(JSON.stringify(frame))));
+    styles.add(`${plan.sequential}:${plan.scattered}`);
+    const delays = plan.cells.map(cell => cell.delay).sort((a, b) => a - b);
+    assert.deepEqual(delays, Array.from({ length }, (_, index) => plan.sequential ? index * 180 : 0));
+    assert.equal(plan.duration, FEEDBACK_TIMING.burst + delays.at(-1)!, 'Dust and flying debris must not postpone gravity');
+    assert.ok(comboDelayMs(frame) >= plan.duration + FEEDBACK_TIMING.fall + 330);
+  }
+  assert.equal(styles.size, 4, 'Both sequential/simultaneous and wide/small bursts occur');
 });
 test('Crossed lines of the same symbol use one matching sound and all sound banks rotate without repeats', () => {
   const random = new SoundVariants(() => 0);

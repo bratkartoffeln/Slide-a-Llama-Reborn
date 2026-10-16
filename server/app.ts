@@ -13,6 +13,7 @@ import { turnMotionMs } from '../shared/feedback.js';
 const random = () => randomInt(0, 0x100000000) / 0x100000000;
 interface Player { name: string; token: string; socket: WebSocket | null; bot: boolean; rematch: boolean; reconnectUntil: number | null }
 interface Room {
+  aim: Move | null;
   code: string; players: [Player | null, Player | null]; game: Game; chat: RoomChat;
   phase: Phase; deadline: number | null; remaining: number; availableAt: number;
   botAt: number; turnSeconds: number; round: number; wins: [number, number]; endReason: string | null; touched: number;
@@ -82,6 +83,7 @@ export async function startServer(options: ServerOptions = {}) {
     const beforeScores = room.game.scores;
     const previousBoard = room.game.board;
     room.game = play(room.game, seat, input, gameRandom, automatic);
+    room.aim = null;
     room.touched = Date.now();
     room.availableAt = Date.now() + (options.animationMs !== undefined ? Math.max(1, room.game.lastMove!.frames.length) * options.animationMs : turnMotionMs(room.game.lastMove!, beforeScores, room.game.scores, previousBoard));
     if (room.game.winner !== null) { finish(room, room.game.winner, 'Alle zehn Lamas sind überzeugt!'); return; }
@@ -158,7 +160,7 @@ export async function startServer(options: ServerOptions = {}) {
             const p = player(data.name, ws);
             let code: string; do { code = randomBytes(4).toString('hex').toUpperCase(); } while (rooms.has(code));
             const turnSeconds = data.turnSeconds === 15 || data.turnSeconds === 60 ? data.turnSeconds : 30;
-            const room: Room = { code, players: [p, data.bot === true ? player('', null, true) : null], game: newGame(gameRandom), chat: new RoomChat(), phase: 'waiting', deadline: null, remaining: 0, availableAt: 0, botAt: 0, turnSeconds, round: 1, wins: [0, 0], endReason: null, touched: Date.now() };
+            const room: Room = { aim: null, code, players: [p, data.bot === true ? player('', null, true) : null], game: newGame(gameRandom), chat: new RoomChat(), phase: 'waiting', deadline: null, remaining: 0, availableAt: 0, botAt: 0, turnSeconds, round: 1, wins: [0, 0], endReason: null, touched: Date.now() };
             rooms.set(code, room); attach(ws, room, 0); return;
           }
           const code = typeof data.room === 'string' ? data.room.trim().toUpperCase() : '';
@@ -178,6 +180,10 @@ export async function startServer(options: ServerOptions = {}) {
         const room = ctx.room, seat = ctx.seat!, p = room.players[seat]!;
         if (p.socket !== ws) throw new Error('Diese Verbindung ist nicht mehr aktiv.');
         if (data.type === 'sync') { send(ws, { type: 'snapshot', state: snapshot(room, seat) }); send(ws, { type: 'chat', messages: room.chat.messages }); }
+        else if (data.type === 'aim') {
+          if (!validMove(data.move)) throw new Error('Ungültiger Einschub.');
+          if (room.phase === 'playing' && seat === room.game.turn && data.revision === room.game.revision && Date.now() >= room.availableAt && room.deadline && Date.now() < room.deadline) room.aim = { ...data.move };
+        }
         else if (data.type === 'move') {
           if (data.revision !== room.game.revision) throw new Error('Der Spielstand hat sich geändert. Versuche den Zug erneut.');
           if (!validMove(data.move)) throw new Error('Ungültiger Einschub.');
@@ -193,6 +199,7 @@ export async function startServer(options: ServerOptions = {}) {
           if (room.players[1]?.bot) room.players[1].rematch = true;
           if (room.players.every(p => p?.rematch)) {
             room.round++;
+            room.aim = null;
             room.game = newGame(gameRandom, (room.round % 2 === 0 ? 1 : 0), room.game.revision + 1);
             room.players.forEach(p => { if (p) p.rematch = false; }); start(room);
           } else broadcast(room);
@@ -221,7 +228,7 @@ export async function startServer(options: ServerOptions = {}) {
       }
       if (room.phase === 'playing' && connected(room) && now >= room.availableAt) {
         if (room.players[room.game.turn]?.bot && now >= room.botAt) move(room, room.game.turn, botMove(room.game));
-        else if (room.deadline && now >= room.deadline) move(room, room.game.turn, { side: 'top', lane: 0 }, true);
+        else if (room.deadline && now >= room.deadline) move(room, room.game.turn, room.aim ?? { side: 'top', lane: 0 }, true);
       }
       if (now - room.touched > 30 * 60_000 && (room.phase === 'waiting' || room.phase === 'finished')) {
         rooms.delete(room.code);

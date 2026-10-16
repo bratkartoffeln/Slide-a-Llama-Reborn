@@ -1,5 +1,5 @@
 import { cloneBoard, findMatches, lamaCounts, push, type Board, type Game, type Seat, type Tile } from '../shared/game';
-import { FEEDBACK_TIMING, boardMotionMs, crushMotionMs, sideEjectImpactMs } from '../shared/feedback';
+import { burstPlan, comboDelayMs, comboFactor, FEEDBACK_TIMING, boardMotionMs, crushMotionMs, sideEjectImpactMs, frameFallMs, gravityImpactMs, initialGravityMs } from '../shared/feedback';
 export { FEEDBACK_TIMING } from '../shared/feedback';
 import type { STONE_SOUNDS } from './audio-catalog';
 
@@ -14,8 +14,7 @@ export type TurnSound = { delay: number } & (
 /** Follow resolved matches, including cascades of a different tile to the one inserted. */
 export function turnSounds(last: NonNullable<Game['lastMove']>, before: [number, number], after: [number, number], you: Seat, animated = true, previous?: Board): TurnSound[] {
   const lead = crushMotionMs(previous, last.move);
-  const start = animated ? lead + FEEDBACK_TIMING.insert + FEEDBACK_TIMING.gravity : 0;
-  const step = FEEDBACK_TIMING.burst + FEEDBACK_TIMING.fall;
+  const start = animated ? lead + FEEDBACK_TIMING.insert + initialGravityMs(last, previous) : 0;
   const cues: TurnSound[] = last.move.side === 'top' ? [] : [{ kind: 'stone', action: 'slide', delay: 0 }];
   const at = (time: number) => animated ? time : 0;
   if (previous) {
@@ -27,28 +26,31 @@ export function turnSounds(last: NonNullable<Game['lastMove']>, before: [number,
       cues.push({ kind: 'stone', action: 'burst', delay: at(side === 'top' ? FEEDBACK_TIMING.crack : impact) });
       if (impact) cues.push({ kind: 'stone', action: 'drop', delay: at(impact) });
     }
-    if (side === 'top' || hasFallingStones(push(previous, last.tile, last.move))) cues.push({ kind: 'stone', action: 'drop', delay: at(lead + FEEDBACK_TIMING.insert + (side === 'top' && full ? 0 : FEEDBACK_TIMING.gravity)) });
+    const landing = side === 'top' ? full ? 0 : FEEDBACK_TIMING.gravity : gravityImpactMs(push(previous, last.tile, last.move));
+    if (side === 'top' || landing > 0) cues.push({ kind: 'stone', action: 'drop', delay: at(lead + FEEDBACK_TIMING.insert + landing) });
   }
   let frameAt = start;
   for (const frame of last.frames) {
     cues.push({ kind: 'thunder', delay: frameAt });
     const titleAt = frameAt + (animated ? FEEDBACK_TIMING.matchBlink : 0);
     const burstAt = titleAt + (animated ? FEEDBACK_TIMING.matchTitle : 0);
+    const burst = animated ? burstPlan(frame).duration : FEEDBACK_TIMING.burst;
+    const step = burst + frameFallMs(frame);
     cues.push({ kind: 'stone', action: 'shatter', delay: burstAt });
-    cues.push({ kind: 'stone', action: 'settle', delay: burstAt + FEEDBACK_TIMING.burst });
+    cues.push({ kind: 'stone', action: 'settle', delay: burstAt + burst });
     const kinds = new Map<Tile, number>();
     for (const match of findMatches(frame.board)) kinds.set(match.tile, Math.max(kinds.get(match.tile) ?? 0, match.cells.length));
     let simultaneous = 0;
     for (const [tile, length] of kinds) cues.push({ kind: 'match', tile, length, multiplier: frame.multiplier, delay: titleAt + simultaneous++ * 90 });
-    if (frame.multiplier > 1) cues.push({ kind: 'combo', delay: burstAt + FEEDBACK_TIMING.comboDelay });
+    if (comboFactor(frame) > 1) cues.push({ kind: 'combo', delay: burstAt + (animated ? comboDelayMs(frame) : FEEDBACK_TIMING.comboDelay) });
     const cleared = cloneBoard(frame.board);
     for (const [r, c] of frame.matches) cleared[r][c] = null;
-    if (hasFallingStones(cleared)) cues.push({ kind: 'stone', action: 'drop', delay: burstAt + step });
-    frameAt = burstAt + step + (frame.multiplier > 1 ? FEEDBACK_TIMING.comboHold : 0);
+    if (hasFallingStones(cleared)) cues.push({ kind: 'stone', action: 'drop', delay: burstAt + burst + gravityImpactMs(cleared) });
+    frameAt = burstAt + step + (comboFactor(frame) > 1 ? FEEDBACK_TIMING.comboHold : 0);
   }
   const delta = lamaCounts(after)[you] - lamaCounts(before)[you];
   if (delta !== 0) {
-    const transferAt = animated ? boardMotionMs(last, previous) : last.frames.some(frame => frame.multiplier > 1) ? frameAt : 0;
+    const transferAt = animated ? boardMotionMs(last, previous) : last.frames.some(frame => comboFactor(frame) > 1) ? frameAt : 0;
     cues.push({ kind: 'voice', mood: delta > 0 ? 'happy' : 'angry', delay: transferAt });
   }
   const mechanical = new Set<string>();

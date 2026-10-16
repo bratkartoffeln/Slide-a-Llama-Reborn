@@ -1,6 +1,6 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.11** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.12** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
 Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
@@ -41,7 +41,8 @@ Bereitschaft und die gemeinsame Version aus `package.json`.
 - Je 60 Punkte Vorsprung wechselt ein Lama die Seite. 300 Punkte Vorsprung gewinnen
   alle zehn Lamas. Beide starten mit fünf.
 - Vorschau: aktueller Stein plus drei kommende Steine.
-- 15/30/60 Sekunden Zugzeit. Danach setzt der Server automatisch oben links ein.
+- 15/30/60 Sekunden Zugzeit. Danach setzt der Server an der zuletzt erkannten
+  Einschubposition dieses Zugs ein; ohne Auswahl oben links.
 - Tastatur: `1`–`5` von oben, `Shift` + Zahl von links, `Alt` + Zahl von rechts.
 - Gemeinsame Revanche mit wechselndem Startspieler und Siegstand.
 
@@ -84,25 +85,48 @@ ein Pfeil zeigt in der Teamfarbe zur Seite des aktiven Spielers. Die obere
 Zeitanzeige und ihr Balken entfallen.
 Die Lamas blinzeln unabhängig voneinander alle drei bis zehn Sekunden.
 Beim Zersplittern ersetzen die Bruchstücke sofort den ursprünglichen Stein.
-Die Tempelsäulen liegen vor den Spielsteinen. Seitlich herausgeschobene Steine
+Die Spielfeldsteine und Bruchstücke liegen vor den Tempelsäulen. Seitlich herausgeschobene Steine
 kippen über die Kante, fallen zum Tempelfuß und zerplatzen erst beim Aufprall.
 Aufprallgeräusche und Freigabe des nächsten Zugs folgen derselben Zeitleiste.
-Erkannte Treffer starten mit dem Originaldonner und dreimaligem Blinken nur der
-betroffenen Steine. Danach erscheint der originale Schriftzug „Three of a Kind“,
+Erkannte Treffer starten mit dem Originaldonner und dreimal blinkenden Umrandungen
+der betroffenen, weiter sichtbaren Steine. Danach erscheint der originale Schriftzug „Three of a Kind“,
 „Four of a Kind“ oder „Five of a Kind“, bevor die Steine zerspringen.
 Bei sich kreuzenden Treffern zählt für den Schriftzug die längste einzelne Reihe.
 Der Countdown mit Team-Pfeil steht ohne eigene Fläche direkt im grauen Tempelfeld.
-Die Säulen sind verbreitert und lassen sämtliche Steine im 5×5-Feld frei.
+Der Tempel ist kompakt und lässt sämtliche Steine im 5×5-Feld frei.
 Schwingende Einschubsteine bleiben hinter den Säulen. Auf dem Desktop wählen
 auch die äußeren Spielfeldzellen den nächsten Rand-Slot; die Mitte und gleich
 weit entfernte Randübergänge bleiben neutral. Die Randpfeile bleiben unsichtbar,
 auf Touch-Geräten sind ihre quadratischen Flächen so groß wie ein Stein.
 Die Punktefenster zeigen wie im Original nur Spielernamen und vierstelligen
-Punktestand. Zusätzliche Hinweiszeilen auf der Bühne und „JETZT“ am Rad entfallen.
+Punktestand, jeweils mit den Punkten außen und den Namen innen in kurzen Leisten.
+Zusätzliche Hinweiszeilen auf der Bühne und „JETZT“ am Rad entfallen.
+Seitliche Vorschauen, Touch-Pfeile und äußere Erkennungsflächen sitzen außerhalb
+der Säulen. Der neue Stein wird von genau dieser Einschubposition animiert.
+Die Kettenanzeige schwebt zufällig als kompletter Schriftzug oder als einzelne
+Buchstabenfolge aus verschiedenen Richtungen herein. Zwei gleichzeitig platzende Reihen lösen ebenso wie eine
+Folgekaskade den verzögerten Combo-Schriftzug und Combo-Sound aus. Der angezeigte
+Faktor berücksichtigt mindestens die Zahl gleichzeitiger Reihen; die Punkteberechnung
+bleibt bei den dokumentierten Reihen- und Kaskadenboni.
 Die Lamas sammeln sich in leicht versetzten Gruppen links bzw. rechts der Mitte;
 bei einem Seitenwechsel ändert sich die Farbe erst beim Überqueren der Mitte.
 Originalgeräusche ergänzen das Nachsetzen nach einem Treffer und die Jubel- bzw.
 Verlustreaktion beim Ergebnis-Overlay. Sie folgen ebenfalls dem SFX-Schalter.
+Ungefähr jeder zweite Treffer läuft als Kettenexplosion mit 180 ms Abstand von Stein zu
+Stein durch die Reihe, mit wechselnder Richtung. Ungleich große Bruchstücke folgen
+Flugbahnen mit Schwerkraft und behalten ihre Größe. Staub verweht nach dem Bruch.
+Manche Ausbrüche schleudern Bruchstücke quer über das
+Spielfeld und erzeugen größere, langsam verwehende Staubwolken. Beide Spieler
+sehen dieselbe Variante. Nur der gerade zerplatzende Stein verschwindet; die
+übrigen bleiben bis zu ihrer eigenen Explosion sichtbar. Schwerkraft, Combo,
+Sounds und Zugfreigabe berücksichtigen die längere Sequenz. Animationen ausschalten
+beendet auch noch geplante Teil-Explosionen sofort.
+Nachrückende Steine fallen mit konstanter Beschleunigung: Die Flugzeit steigt
+mit der Quadratwurzel der Fallstrecke (320 ms für eine Zelle, 640 ms für vier).
+Erst beim Kontakt folgen 120 ms Landen mit leichter Stauchung und kurzem
+Nachfedern. Der Aufprallton beginnt beim Kontakt; Combo und Zugfreigabe warten
+bis die Steine gelandet sind. Obere Einschubvorschauen halten auch am tiefsten
+Punkt ihrer Schwingung Abstand zur ersten Steinreihe.
 
 **✦** schaltet Einschub-, Bruch-, Punkte-, Fall-, Trefferketten-, Lamawechsel- und Sieganimationen
 an oder aus. Ausschalten beendet laufende Animationen sofort; der endgültige
