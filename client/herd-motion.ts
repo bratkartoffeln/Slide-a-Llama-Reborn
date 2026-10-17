@@ -35,7 +35,8 @@ export class HerdMotion {
       const column = index % 5, row = Math.floor(index / 5);
       const x = team === 0 ? 7 + column * 7.5 : 93 - column * 7.5;
       const height = row * 13 + (column % 2) * 5;
-      return `<span class="mini-llama team-${team === 0 ? 'zero' : 'one'}" data-llama="${id}" data-team="${team}" style="left:${x}%;bottom:${height}px;z-index:${3 - row}"><span class="llama-life">${llama(team === 0 ? '#eee0c4' : '#d3e0d4', team === 0 ? '#ce7855' : '#5c8977')}${follower(team as Seat)}</span></span>`;
+      // Lower feet belong in front, including the stagger within each row.
+      return `<span class="mini-llama team-${team === 0 ? 'zero' : 'one'}" data-llama="${id}" data-team="${team}" style="left:${x}%;bottom:${height}px;z-index:${30 - height}"><span class="llama-life">${llama(team === 0 ? '#eee0c4' : '#d3e0d4', team === 0 ? '#ce7855' : '#5c8977')}${follower(team as Seat)}</span></span>`;
     }).join('')).join('');
     this.root.querySelectorAll<HTMLElement>('.mini-llama').forEach(element => this.paint(element, Number(element.dataset.team) as Seat));
     if (transfer && this.enabled()) for (const element of this.root.querySelectorAll<HTMLElement>('.mini-llama')) {
