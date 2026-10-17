@@ -1,10 +1,11 @@
-import type { Board, Game, Seat } from '../shared/game';
-import { MATCH_SOUNDS, LAMA_SOUNDS, COMBO_SOUND, STONE_SOUNDS, CHAT_SOUND, IDLE_LAMA_SOUNDS, MUSIC_SOUND, THUNDER_SOUND, RESULT_SOUNDS } from './audio-catalog';
+import { lamaCounts, type Board, type Game, type Seat } from '../shared/game';
+import { MATCH_SOUNDS, LAMA_SOUNDS, COMBO_SOUND, STONE_SOUNDS, CHAT_SOUND, IDLE_LAMA_SOUNDS, MUSIC_SOUND, THUNDER_SOUND, RESULT_SOUNDS, START_SOUND } from './audio-catalog';
 import { SoundVariants, turnSounds, type TurnSound } from './sound-events';
 
 type Cue = 'move' | 'match' | 'combo' | 'win' | 'chat';
 type Channel = 'effect' | 'voice' | 'accent' | 'stone' | 'chat' | 'idle';
-type SampleRequest = { file: string; channel: Channel; volume: number; fallback: Cue };
+export type LamaVoice = { kind: 'idle' } | { kind: 'transfer'; team: Seat; count: number; moved: number };
+type SampleRequest = { file: string; channel: Channel; volume: number; fallback: Cue; speaker?: LamaVoice };
 
 /** Music loops independently of every SFX channel and pauses outside active play. */
 export class GameMusic {
@@ -26,6 +27,8 @@ export class GameMusic {
 
 /** Local original effects follow each resolved turn in either visual theme. */
 export class GameAudio {
+  onLamaVoice?: (voice: LamaVoice) => () => void;
+  private speaking = new Map<HTMLAudioElement, () => void>();
   private context: AudioContext | null = null;
   private samples = new Map<HTMLAudioElement, Channel>();
   private oscillators = new Set<OscillatorNode>();
@@ -38,13 +41,17 @@ export class GameAudio {
   enabled = false;
   voicesEnabled = true;
   playChat() { if (this.enabled) { this.stopIdle(); this.original(CHAT_SOUND, 'chat', .5, 'chat'); } }
+  playStart() {
+    if (!this.enabled || document.hidden) return;
+    this.stopIdle(); this.original(START_SOUND, 'accent', .35, 'win');
+  }
   playResult(won: boolean) {
     if (!this.enabled || document.hidden) return;
     this.stopIdle(); this.original(RESULT_SOUNDS[won ? 'won' : 'lost'], 'voice', .35, won ? 'win' : 'chat');
   }
   playIdleLama(): boolean {
     if (!this.enabled || !this.voicesEnabled || document.hidden || this.samples.size || this.queue.length || this.timers.size || Date.now() - this.lastActivity < 10000) return false;
-    this.original(this.variants.next('idle', IDLE_LAMA_SOUNDS), 'idle', .22, 'chat');
+    this.original(this.variants.next('idle', IDLE_LAMA_SOUNDS), 'idle', .22, 'chat', { kind: 'idle' });
     return true;
   }
   private stopIdle() { for (const [sample, channel] of this.samples) if (channel === 'idle') this.stopSample(sample); }
@@ -76,37 +83,52 @@ export class GameAudio {
     for (const cue of turnSounds(last, before, after, you, animated, previous)) {
       const timer = setTimeout(() => {
         this.timers.delete(timer);
-        if (this.enabled && !document.hidden && generation === this.generation) this.emit(cue);
+        if (this.enabled && !document.hidden && generation === this.generation) this.emit(cue, before, after, last.seat);
       }, cue.delay);
       this.timers.add(timer);
     }
   }
-  private emit(cue: TurnSound) {
+  private emit(cue: TurnSound, before: [number, number], after: [number, number], team: Seat) {
     if (cue.kind === 'thunder') { this.original(THUNDER_SOUND, 'accent', .35, 'move'); return; }
     if (cue.kind === 'stone') { this.original(STONE_SOUNDS[cue.action], 'stone', cue.action === 'settle' ? .2 : .42, 'move'); return; }
     if (cue.kind === 'voice') {
-      if (this.voicesEnabled) this.original(this.variants.next('voice-' + cue.mood, LAMA_SOUNDS[cue.mood]), 'voice', .4, 'chat');
+      if (this.voicesEnabled) {
+        const count = lamaCounts(after)[team], moved = count - lamaCounts(before)[team];
+        this.original(this.variants.next('voice-' + cue.mood, LAMA_SOUNDS[cue.mood]), 'voice', .4, 'chat', { kind: 'transfer', team, count, moved });
+      }
     } else if (cue.kind === 'combo') this.original(COMBO_SOUND, 'accent', .24, 'combo');
     else if (cue.kind === 'match') this.original(this.variants.next(cue.tile, MATCH_SOUNDS[cue.tile]), 'effect', .38, 'match');
   }
   private stopSample(sample: HTMLAudioElement) {
+    this.stopSpeaking(sample);
     sample.pause(); this.samples.delete(sample);
     try { sample.currentTime = 0; } catch {}
   }
-  private original(file: string, channel: Channel, volume: number, fallback: Cue) {
+  private stopSpeaking(sample: HTMLAudioElement) {
+    const stop = this.speaking.get(sample); this.speaking.delete(sample); stop?.();
+  }
+  private original(file: string, channel: Channel, volume: number, fallback: Cue, speaker?: LamaVoice) {
     this.lastActivity = Date.now();
     const active = [...this.samples.values()].filter(c => c === channel).length;
     const limit = channel === 'voice' ? 1 : channel === 'effect' || channel === 'stone' ? 4 : 2;
-    if (active >= limit) { this.queue.push({ file, channel, volume, fallback }); return; }
+    if (active >= limit) { this.queue.push({ file, channel, volume, fallback, speaker }); return; }
     const sample = new Audio(file); sample.volume = volume;
     const generation = this.generation;
     this.samples.set(sample, channel);
     const finish = () => {
+      this.stopSpeaking(sample);
       if (!this.samples.delete(sample) || generation !== this.generation) return;
       this.lastActivity = Date.now();
       const next = this.queue.findIndex(request => request.channel === channel);
-      if (next >= 0) { const request = this.queue.splice(next, 1)[0]; this.original(request.file, request.channel, request.volume, request.fallback); }
+      if (next >= 0) { const request = this.queue.splice(next, 1)[0]; this.original(request.file, request.channel, request.volume, request.fallback, request.speaker); }
     };
+    sample.addEventListener('playing', () => {
+      if (speaker && this.enabled && this.voicesEnabled && !document.hidden && this.samples.has(sample) && !this.speaking.has(sample)) {
+        const stop = this.onLamaVoice?.(speaker); if (stop) this.speaking.set(sample, stop);
+      }
+    });
+    sample.addEventListener('pause', () => this.stopSpeaking(sample));
+    sample.addEventListener('waiting', () => this.stopSpeaking(sample));
     sample.addEventListener('ended', finish, { once: true });
     sample.addEventListener('error', finish, { once: true });
     void sample.play().catch(() => {

@@ -111,6 +111,25 @@ test('Server clock inserts a tile after timeout and practice bot takes its own t
   await a.wait('snapshot', m => m.state.game.lastMove?.automatic === true);
   await a.wait('snapshot', m => m.state.game.revision >= 2 && m.state.game.turn === 0);
 });
+
+for (const [difficulty, name] of [['easy', 'Chico'], ['medium', 'Paco'], ['hard', 'Inti'], ['invalid', 'Paco']] as const) {
+  test(`CPU ${difficulty} keeps its server-selected identity through rematch and reconnect`, async t => {
+    const server = await startServer({ port: 0, botDelayMs: 60000 }); t.after(() => server.close());
+    const a = await client(server.url); a.send({ type: 'create', name: 'Alex', bot: true, difficulty });
+    const welcome = await a.wait('welcome');
+    const expected = difficulty === 'invalid' ? 'medium' : difficulty;
+    const first = (await a.wait('snapshot', m => m.state.phase === 'playing')).state;
+    assert.equal(first.players[1]?.name, name); assert.equal(first.players[1]?.difficulty, expected);
+    a.send({ type: 'resign' }); await a.wait('snapshot', m => m.state.phase === 'finished');
+    a.send({ type: 'rematch' });
+    const next = (await a.wait('snapshot', m => m.state.round === 2)).state;
+    assert.equal(next.players[1]?.name, name); assert.equal(next.players[1]?.difficulty, expected);
+    a.ws.terminate();
+    const resumed = await client(server.url); resumed.send({ type: 'resume', room: welcome.room, token: welcome.token });
+    const state = (await resumed.wait('snapshot', m => m.state.phase === 'playing')).state;
+    assert.equal(state.players[1]?.name, name); assert.equal(state.players[1]?.difficulty, expected);
+  });
+}
 test('Resignation and mutual rematch track wins, alternate starters and invalidate old revisions', async t => {
   const server = await startServer({ port: 0 }); t.after(() => server.close());
   const { a, b } = await pair(server.url); a.send({ type: 'resign' });

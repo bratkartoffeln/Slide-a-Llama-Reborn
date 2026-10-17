@@ -1,6 +1,15 @@
 export const SIZE = 5;
 export const LAMA_STEP = 60;
 export const WIN_LEAD = 300;
+export const BOT_LEVELS = {
+  easy: { name: 'Chico', label: 'Leicht', description: 'Chico sammelt Punkte, ohne deine Antwort vorauszuplanen.' },
+  medium: { name: 'Paco', label: 'Mittel', description: 'Paco berücksichtigt deine beste Antwort auf seinen Zug.' },
+  hard: { name: 'Inti', label: 'Schwer', description: 'Inti plant mit allen vier sichtbaren Steinen voraus.' }
+} as const;
+export type BotDifficulty = keyof typeof BOT_LEVELS;
+export function botDifficulty(value: unknown): BotDifficulty {
+  return value === 'easy' || value === 'hard' ? value : 'medium';
+}
 export const TILES = ['cherry', 'lemon', 'grape', 'melon', 'bell', 'seven', 'bar'] as const;
 export type Tile = typeof TILES[number];
 export const TILE_INFO: Record<Tile, { name: string; points: number; color: string }> = {
@@ -131,14 +140,45 @@ export function lamaCounts(scores: [number, number]): [number, number] {
   return [left, 10 - left];
 }
 export const MOVES: Move[] = (['top', 'left', 'right'] as const).flatMap(side => Array.from({ length: SIZE }, (_, lane) => ({ side, lane })));
-export function botMove(game: Game): Move {
+export function botMove(game: Game, difficulty: BotDifficulty = 'medium'): Move {
+  if (difficulty === 'hard') return plannedBotMove(game);
   // Both players see the same queue. Penalise the opponent's best reply.
   let best = MOVES[0], value = -Infinity;
   for (const move of MOVES) {
     const result = play(game, game.turn, move, () => 0.5);
     const gain = result.lastMove!.points;
-    const reply = result.winner !== null ? 0 : Math.max(...MOVES.map(m => resolve(insert(result.board, result.queue[0], m)).points));
-    const score = result.winner !== null ? 10000 : gain - reply * 0.75;
+    const reply = difficulty === 'easy' || result.winner !== null ? 0 : Math.max(...MOVES.map(m => resolve(insert(result.board, result.queue[0], m)).points));
+    const opponent = result.turn;
+    const opponentCanWin = difficulty !== 'easy' && result.scores[opponent] + reply - result.scores[game.turn] >= WIN_LEAD;
+    const score = result.winner !== null ? 100000 : opponentCanWin ? -100000 + gain : gain - reply * 0.75;
+    if (score > value) { value = score; best = move; }
+  }
+  return best;
+}
+
+/** Four plies use exactly the public queue; generated replacement tiles are never searched. */
+function plannedBotMove(game: Game): Move {
+  const seat = game.turn, opponent = seat === 0 ? 1 : 0;
+  function search(position: Game, depth: number, alpha: number, beta: number): number {
+    if (position.winner !== null) return position.winner === seat ? 100000 + depth : -100000 - depth;
+    if (depth === 0) return position.scores[seat] - position.scores[opponent];
+    const maximizing = position.turn === seat;
+    let value = maximizing ? -Infinity : Infinity;
+    for (const { next } of children(position)) {
+      const score = search(next, depth - 1, alpha, beta);
+      value = maximizing ? Math.max(value, score) : Math.min(value, score);
+      if (maximizing) alpha = Math.max(alpha, value); else beta = Math.min(beta, value);
+      if (alpha >= beta) break;
+    }
+    return value;
+  }
+  function children(position: Game) {
+    return MOVES.map(move => ({ move, next: play(position, position.turn, move, () => .5) }))
+      .sort((a, b) => Number(b.next.winner !== null) - Number(a.next.winner !== null) || b.next.lastMove!.points - a.next.lastMove!.points);
+  }
+  let best = MOVES[0], value = -Infinity;
+  for (const { move, next } of children(game)) {
+    const score = search(next, 3, value, Infinity);
     if (score > value) { value = score; best = move; }
   }
   return best;

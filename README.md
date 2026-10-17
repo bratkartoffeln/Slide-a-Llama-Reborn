@@ -1,6 +1,6 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.13** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.14** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
 Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
@@ -16,8 +16,9 @@ npm run dev
 Browser: **http://localhost:5173**. Unter Windows auch `Start-Windows.cmd`.
 Name eingeben, **Freund einladen** wählen und den Link weitergeben. Beide Spieler
 brauchen Zugriff auf denselben Server. Ein localhost-Link funktioniert nur auf
-deinem Rechner; im LAN die Rechner-IP verwenden. **Mit Paco üben** startet sofort
-eine Partie gegen den Computer.
+deinem Rechner; im LAN die Rechner-IP verwenden. Auf der Startseite unter
+**CPU-Gegner** zwischen **Leicht · Chico**, **Mittel · Paco** und **Schwer · Inti**
+wählen und mit **Mit … üben** eine Partie starten. Die Auswahl bleibt gespeichert.
 
 Produktionsbetrieb:
 
@@ -75,7 +76,9 @@ bis nach oben; beim Nachrücken dreht sich das Rad gegen den Uhrzeigersinn.
 Nach dem Einschub rücken die Folgesteine von ihren bisherigen Positionen nach;
 das Rad behält seinen Drehwinkel und springt zwischen den Zügen nicht zurück.
 Die Steine bleiben dabei wie Riesenrad-Gondeln aufrecht und bewegen nur ihre
-Position entlang der Kreisbahn.
+Position entlang der Kreisbahn. Die Umrandungen aller vier Steine wechseln
+zwischen den Spielerfarben Rot und Blau: Jeder Stein trägt die Farbe des
+Spielers, der ihn beim entsprechenden Zug bekommt. Tooltips nennen seinen Namen.
 Am Desktop zeigt die gewählte Einschubposition den aktuellen Stein, der in
 Einschubrichtung schwingt. Auf Touch-Geräten bleiben die Pfeilbuttons sichtbar.
 Die Lamas wechseln tatsächlich ihre Plätze, wippen beim Laufen und blinzeln
@@ -146,6 +149,14 @@ Gelegentliche Original-Lama-Laute mit kleinen Körperreaktionen ergänzen ruhige
 Spielphasen. Sie haben mindestens zehn Sekunden Abstand zum letzten Sound und
 machen Platz, sobald ein Zug oder eine Chatnachricht beginnt. SFX schaltet
 auch diese Laute ab.
+Das jeweils sprechende Lama bewegt seinen Mund für die tatsächliche Dauer der
+Stimme. Bei Ruhe-Lauten wird ein zufälliges Lama gewählt, beim Seitenwechsel
+eines der wechselnden Lamas. Mund- und Körperreaktion gehören zur selben Figur.
+Stummschalten, unterbrochene Wiedergabe und das Ende des Sounds schließen den
+Mund wieder. Der Animationsschalter und reduzierte Bewegung gelten auch dafür.
+Ein kurzer Flöten-Jingle eröffnet jede neue Runde, sobald der Gegner beitritt
+oder das Training bzw. eine Revanche beginnt. Er folgt dem SFX-Schalter und
+wiederholt sich bei Zustandsmeldungen oder Wiederverbindungen nicht.
 Neue fremde
 Chatnachrichten spielen den klassischen ICQ-„Uh-oh“-Ton.
 SFX enthält auch die positiven bzw. verärgerten Reaktionen bei eigenen
@@ -165,7 +176,8 @@ ein Gewinn-/Verlust-Overlay mit „Noch eine Runde?“ sichtbar, bis die nächst
 Runde beginnt. Alternativ lässt sich dort zum Startbildschirm zurückkehren.
 Das Overlay erscheint erst nach dem letzten Zug samt Lamawechsel und Effekten.
 Eine ICQ-Bühne zeigt die Sieger-Lamas jubelnd und hüpfend, die unterlegenen
-Lamas mit gesenktem Kopf und Seufzerbewegung. Teamfarben bleiben für beide
+Lamas mit gesenktem Kopf, nach unten gerichteten Augen und traurigem Mund.
+Die Sieger lachen mit offenem Mund und fröhlich geschlossenen Augen. Teamfarben bleiben für beide
 Spieler gleich. Der Animationsschalter und reduzierte Bewegung gelten auch hier.
 
 Bildquellen, Gameplay-Videos, Extraktion und Zuordnung der Medien:
@@ -195,7 +207,12 @@ ohne Liste sind Browser vom selben Host und native Clients ohne Origin erlaubt.
 Räume und Chat liegen im Arbeitsspeicher eines Serverprozesses. Ein Neustart
 beendet Sitzungen; es gibt keine Konten oder dauerhafte Historie. Mehrere
 Serverinstanzen würden eine gemeinsame Raum-/Sitzungsverwaltung benötigen.
-Paco berücksichtigt bei seiner Zugwahl die beste Antwort des Gegners.
+Chico wählt den Zug mit den meisten unmittelbaren Punkten. Paco berücksichtigt
+zusätzlich die beste Antwort des Gegners. Inti plant vier Halbzüge mit allen vier
+sichtbaren Steinen voraus und berücksichtigt dabei Siege und drohende Niederlagen.
+Name und Stufe bleiben auch bei Wiederverbindung und Revanche erhalten.
+Vor jedem Zug warten alle CPU-Gegner zufällig zwei bis fünf Sekunden, beginnend nach den
+laufenden Zuganimationen.
 
 ## Prüfen
 

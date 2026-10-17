@@ -23,4 +23,5 @@ export const STONE_SOUNDS = {
 } as const;
 export const ORIGINAL_SOUND_FILES = [...Object.values(MATCH_SOUNDS).flat(), ...LAMA_SOUNDS.happy, ...LAMA_SOUNDS.angry, COMBO_SOUND, ...Object.values(STONE_SOUNDS), ...IDLE_LAMA_SOUNDS, THUNDER_SOUND, ...Object.values(RESULT_SOUNDS)];
 export const CHAT_SOUND = '/audio/icq-uh-oh.mp3';
-export const SOUND_FILES = [...ORIGINAL_SOUND_FILES, CHAT_SOUND, MUSIC_SOUND];
+export const START_SOUND = '/audio/temple-start.wav';
+export const SOUND_FILES = [...ORIGINAL_SOUND_FILES, CHAT_SOUND, MUSIC_SOUND, START_SOUND];

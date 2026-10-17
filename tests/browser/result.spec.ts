@@ -35,11 +35,14 @@ for (const you of [0, 1] as const) test(`Lama result for seat ${you} waits for t
   await expect(page.locator('.endgame-team[data-team="0"]')).toHaveAttribute('data-mood', 'happy');
   await expect(page.locator('.endgame-team[data-team="1"]')).toHaveAttribute('data-mood', 'sad');
   await expect(page.locator('.endgame-llama')).toHaveCount(6);
+  await expect(page.locator('[data-mood=happy] .result-mouth')).toHaveCount(3);
+  await expect(page.locator('[data-mood=sad] .result-head').first()).toHaveAttribute('transform', 'rotate(24 84 116)');
   expect(await page.locator('#herd-llamas').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length)).toBe(0);
   expect(await page.locator('.endgame-scene').evaluate(el => el.getAnimations({ subtree: true }).some(a => a.playState === 'running'))).toBe(true);
   await page.screenshot({ path: `test-results/llama-result-${you === 0 ? 'won' : 'lost'}.png`, fullPage: true });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   expect(await page.locator('.endgame-scene').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length)).toBe(0);
+  await page.locator('.result-card').screenshot({ path: `test-results/result-expressions-${you}.png` });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('#result #rematch')).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
