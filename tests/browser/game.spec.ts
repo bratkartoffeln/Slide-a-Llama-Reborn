@@ -4,8 +4,12 @@ test('Two browsers play, exchange safe chat, reconnect after reload, and agree o
   const hostContext = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
   const guestContext = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   for (const context of [hostContext, guestContext]) await context.addInitScript(() => {
-    Object.assign(window, { chatSounds: 0 });
-    HTMLMediaElement.prototype.play = function () { if (this.src.endsWith('/icq-uh-oh.mp3')) (window as any).chatSounds++; return Promise.resolve(); };
+    Object.assign(window, { chatSounds: 0, startSounds: 0 });
+    HTMLMediaElement.prototype.play = function () {
+      if (this.src.endsWith('/icq-uh-oh.mp3')) (window as any).chatSounds++;
+      if (this.src.endsWith('/temple-start.wav')) (window as any).startSounds++;
+      return Promise.resolve();
+    };
   });
   const host = await hostContext.newPage(), guest = await guestContext.newPage();
   const errors: string[] = []; host.on('pageerror', e => errors.push(e.message)); guest.on('pageerror', e => errors.push(e.message));
@@ -14,11 +18,14 @@ test('Two browsers play, exchange safe chat, reconnect after reload, and agree o
   await host.locator('#theme-toggle').click(); await host.locator('#name').fill('Alex'); await host.locator('#create').click();
   await expect(host.locator('#room-code')).toHaveText(/^[A-F0-9]{8}$/);
   const invite = await host.locator('#invite-link').inputValue();
+  expect(await host.evaluate(() => (window as any).startSounds)).toBe(0);
   await host.locator('#theme-toggle').click();
   await expect(host.locator('body')).toHaveAttribute('data-theme', 'retro');
   await expect(host.locator('#invite-link')).toHaveValue(invite);
   await guest.goto(invite); await guest.locator('#name').fill('Sam'); await guest.getByRole('button', { name: 'Raum beitreten' }).click();
   await expect(host.locator('#turn-label')).toContainText('Du bist dran');
+  await expect.poll(() => host.evaluate(() => (window as any).startSounds)).toBe(1);
+  await expect.poll(() => guest.evaluate(() => (window as any).startSounds)).toBe(1);
   await expect(guest.locator('.move-button:enabled')).toHaveCount(0);
   await host.getByRole('button', { name: 'Spalte 3 von oben einschieben' }).click();
   await expect(guest.locator('#turn-label')).toContainText('Du bist dran');
@@ -33,6 +40,8 @@ test('Two browsers play, exchange safe chat, reconnect after reload, and agree o
   await guest.reload(); await expect(guest.locator('#connection-label')).toContainText('verbunden');
   await expect(guest.locator('#messages')).toContainText('Hallo 🦙');
   expect(await guest.evaluate(() => (window as any).chatSounds)).toBe(0);
+  expect(await guest.evaluate(() => (window as any).startSounds)).toBe(0);
+  expect(await host.evaluate(() => (window as any).startSounds)).toBe(1);
   await expect(host.locator('.move-button:enabled')).toHaveCount(15);
   await host.screenshot({ path: 'test-results/desktop-game.png', fullPage: true });
   await guest.locator('#resign').click(); await guest.locator('#confirm-yes').click();
@@ -45,6 +54,8 @@ test('Two browsers play, exchange safe chat, reconnect after reload, and agree o
   await expect(host.locator('#result')).toBeVisible();
   await guest.locator('#rematch').click();
   await expect(host.locator('#round')).toHaveText('2'); await expect(guest.locator('#turn-label')).toContainText('Du bist dran');
+  await expect.poll(() => host.evaluate(() => (window as any).startSounds)).toBe(2);
+  await expect.poll(() => guest.evaluate(() => (window as any).startSounds)).toBe(1);
   await expect(host.locator('#result')).toBeHidden(); await expect(guest.locator('#result')).toBeHidden();
   expect(errors).toEqual([]);
   await hostContext.close(); await guestContext.close();
@@ -52,6 +63,11 @@ test('Two browsers play, exchange safe chat, reconnect after reload, and agree o
 test('Mobile lobby, rules, training and touch targets fit without horizontal scrolling', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
   const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  let availableAt = 0;
+  page.on('websocket', socket => socket.on('framereceived', event => {
+    const message = JSON.parse(String(event.payload));
+    if (message.type === 'snapshot') availableAt = Date.now() + Math.max(0, message.state.availableAt - message.state.serverTime);
+  }));
   await page.goto('/'); await page.locator('#theme-toggle').click();
   await page.screenshot({ path: 'test-results/mobile-lobby.png', fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -60,8 +76,8 @@ test('Mobile lobby, rules, training and touch targets fit without horizontal scr
   await expect(page.locator('#player-1')).toContainText('Paco'); await page.locator('#arena').scrollIntoViewIfNeeded();
   await page.getByRole('button', { name: 'Spalte 2 von oben einschieben' }).click();
   await expect(page.locator('#turn-label')).toContainText('Paco ist am Zug');
-  await expect(page.locator('#turn-label')).toContainText('Du bist dran', { timeout: 8000 });
-  await expect(page.locator('.move-button:enabled')).toHaveCount(15);
+  await expect(page.locator('#turn-label')).toContainText('Du bist dran', { timeout: Math.max(8000, availableAt - Date.now() + 6500) });
+  await expect(page.locator('.move-button:enabled')).toHaveCount(15, { timeout: Math.max(5000, availableAt - Date.now() + 1500) });
   await page.screenshot({ path: 'test-results/mobile-game.png', fullPage: true });
   await expect(page.locator('.retro-follower:visible')).toHaveCount(0);
   await page.locator('#theme-toggle').click();

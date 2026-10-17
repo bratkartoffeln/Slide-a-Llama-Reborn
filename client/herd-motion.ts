@@ -1,6 +1,7 @@
 import { llama, follower } from './art';
 import type { Seat } from '../shared/game';
 import { FEEDBACK_TIMING } from '../shared/feedback';
+import type { LamaVoice } from './sound';
 
 /** Stable identities let a converted follower actually walk from its old slot. */
 export class HerdMotion {
@@ -9,8 +10,11 @@ export class HerdMotion {
   private scheduled = new Set<HTMLElement>();
   private animations = new Set<Animation>();
   private walks = new Set<number>();
+  private speaking: { id: number; token: symbol } | null = null;
   constructor(private root: HTMLElement, private enabled: () => boolean) {}
-  clear() {
+  clear(preserveSpeech = false) {
+    if (!preserveSpeech) this.speaking = null;
+    this.root.querySelectorAll('.is-speaking').forEach(element => element.classList.remove('is-speaking'));
     for (const timer of this.timers) clearTimeout(timer); this.timers.clear();
     this.scheduled.clear();
     for (const animation of this.animations) animation.cancel(); this.animations.clear();
@@ -20,7 +24,7 @@ export class HerdMotion {
   }
   render(count: number, transfer: boolean) {
     if (this.root.children.length === 10 && this.teams[0].length === count) return;
-    this.clear();
+    this.clear(true);
     const old = new Map([...this.root.querySelectorAll<HTMLElement>('.mini-llama')].map(element => {
       const rect = element.getBoundingClientRect();
       return [Number(element.dataset.llama), { x: rect.left + rect.width / 2, y: rect.bottom, team: element.dataset.side }];
@@ -48,7 +52,7 @@ export class HerdMotion {
       });
       if (converted) this.followSide(element);
     }
-    this.refresh();
+    this.paintSpeech(); this.refresh();
   }
   private paint(element: HTMLElement, side: Seat) {
     element.dataset.side = String(side);
@@ -73,10 +77,31 @@ export class HerdMotion {
     // State updates must not keep postponing a follower's next blink.
     for (const figure of this.root.querySelectorAll<HTMLElement>('.llama-life')) if (!this.scheduled.has(figure)) this.schedule(figure, 1800 + Math.random() * 4500);
   }
-  react() {
+  speak(voice: LamaVoice): () => void {
+    if (!this.enabled() || document.hidden) return () => {};
+    let candidates = this.teams.flat();
+    if (voice.kind === 'transfer') {
+      const current = this.teams[voice.team];
+      // Audio may start just before the visual transfer rebuilds the herd.
+      candidates = voice.count > current.length
+        ? this.teams[voice.team === 0 ? 1 : 0].slice(-(voice.count - current.length))
+        : current.slice(-Math.max(1, voice.moved));
+    }
+    const id = candidates[Math.floor(Math.random() * candidates.length)];
+    if (id === undefined) return () => {};
+    const token = Symbol(); this.speaking = { id, token }; this.paintSpeech();
+    if (voice.kind === 'idle') this.react(this.root.querySelector<HTMLElement>(`[data-llama="${id}"] .llama-life`) ?? undefined);
+    return () => { if (this.speaking?.token === token) { this.speaking = null; this.paintSpeech(); } };
+  }
+  private paintSpeech() {
+    this.root.querySelectorAll<HTMLElement>('.mini-llama').forEach(element => {
+      element.classList.toggle('is-speaking', this.speaking?.id === Number(element.dataset.llama));
+    });
+  }
+  private react(selected?: HTMLElement) {
     if (!this.enabled() || document.hidden) return;
     const figures = [...this.root.querySelectorAll<HTMLElement>('.mini-llama:not(.is-crossing) .llama-life')];
-    const figure = figures[Math.floor(Math.random() * figures.length)];
+    const figure = selected ?? figures[Math.floor(Math.random() * figures.length)];
     if (figure) this.animate(figure, [{ scale: '1 1', rotate: '0deg' }, { scale: '1.025 .96', rotate: '-3deg', offset: .35 }, { scale: '.99 1.015', rotate: '2deg', offset: .65 }, { scale: '1 1', rotate: '0deg' }], 1400);
   }
   private schedule(figure: HTMLElement, delay: number) {

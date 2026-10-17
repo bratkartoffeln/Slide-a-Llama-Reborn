@@ -106,3 +106,37 @@ test('Bot chooses legal moves and long games preserve gravity and terminate casc
     for (let c = 0; c < 5; c++) { let seen = false; for (let r = 0; r < 5; r++) { if (game.board[r][c]) seen = true; else assert.equal(seen, false); } }
   }
 });
+
+test('CPU levels make different tactical choices and hard avoids a loss beyond the direct reply', () => {
+  const game = newGame();
+  game.board = [
+    ['seven', 'cherry', 'melon', 'melon', 'cherry'],
+    ['cherry', 'grape', 'grape', 'melon', 'grape'],
+    ['bell', 'lemon', 'cherry', 'cherry', 'bar'],
+    ['bell', 'lemon', 'cherry', 'bell', 'seven'],
+    ['cherry', 'melon', 'grape', 'seven', 'bar']
+  ];
+  game.queue = ['grape', 'seven', 'grape', 'grape'];
+  const before = JSON.stringify(game);
+  assert.deepEqual(botMove(game, 'easy'), { side: 'top', lane: 0 });
+  assert.deepEqual(botMove(game, 'medium'), { side: 'left', lane: 2 });
+  assert.deepEqual(botMove(game, 'hard'), { side: 'right', lane: 0 });
+  // Exhaust every remaining reply rather than relying on the production search pruning.
+  function finalLead(position: typeof game, remaining: number): number {
+    if (position.winner !== null) return position.winner === 0 ? 100000 : -100000;
+    if (!remaining) return position.scores[0] - position.scores[1];
+    const leads = MOVES.map(move => finalLead(play(position, position.turn, move, () => .5), remaining - 1));
+    return position.turn === 0 ? Math.max(...leads) : Math.min(...leads);
+  }
+  assert.equal(finalLead(play(game, 0, botMove(game, 'medium'), () => .5), 3), -30);
+  assert.equal(finalLead(play(game, 0, botMove(game, 'hard'), () => .5), 3), 0);
+  assert.equal(JSON.stringify(game), before);
+});
+
+test('Every CPU level takes an immediate winning move for either seat', () => {
+  for (const difficulty of ['easy', 'medium', 'hard'] as const) for (const seat of [0, 1] as const) {
+    const game = newGame(); game.turn = seat; game.scores[seat] = 290;
+    game.board = empty(); game.board[4][1] = game.board[4][2] = 'cherry'; game.queue[0] = 'cherry';
+    assert.equal(play(game, seat, botMove(game, difficulty)).winner, seat);
+  }
+});

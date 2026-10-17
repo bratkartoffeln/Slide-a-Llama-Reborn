@@ -63,6 +63,20 @@ async function prepare(page: import('@playwright/test').Page, ejection = false, 
   return { aims };
 }
 
+test('Wheel borders follow the next owners through a move and theme switch', async ({ page }) => {
+  await prepare(page);
+  const owners = () => page.locator('#current-tile,#next-tiles>div').evaluateAll(elements => elements.map(el => el.getAttribute('data-team')));
+  expect(await owners()).toEqual(['0', '1', '0', '1']);
+  await expect(page.locator('#current-tile')).toHaveCSS('border-top-color', 'rgb(218, 52, 43)');
+  await page.locator('[data-move="left:4"]').click();
+  await expect.poll(owners).toEqual(['1', '0', '1', '0']);
+  await expect(page.locator('#current-tile')).toHaveCSS('border-top-color', 'rgb(85, 83, 191)');
+  await expect(page.locator('#current-tile')).toHaveAttribute('title', /Sam/);
+  await page.locator('#theme-toggle').click();
+  expect(await owners()).toEqual(['1', '0', '1', '0']);
+  await expect(page.locator('#next-tiles>div').first()).toHaveCSS('border-top-color', 'rgb(218, 52, 43)');
+});
+
 test('Desktop controls show a direction preview; BAR scores and the counter follows the active team', async ({ page }) => {
   await prepare(page);
   const heights = await page.locator('.site-header nav>button').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().height));

@@ -4,14 +4,14 @@ import { readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { randomBytes, randomInt } from 'node:crypto';
 import { WebSocket, WebSocketServer } from 'ws';
-import { newGame, play, botMove, validMove, type Game, type Seat, type Move } from '../shared/game.js';
+import { newGame, play, botMove, validMove, botDifficulty, BOT_LEVELS, type BotDifficulty, type Game, type Seat, type Move } from '../shared/game.js';
 import { normalizeText, requestId, type Phase, type ServerMessage, type Snapshot } from '../shared/protocol.js';
 import { RoomChat } from './chat.js';
 import { DeploymentGuard } from './deploy-guard.js';
 import { turnMotionMs } from '../shared/feedback.js';
 
 const random = () => randomInt(0, 0x100000000) / 0x100000000;
-interface Player { name: string; token: string; socket: WebSocket | null; bot: boolean; rematch: boolean; reconnectUntil: number | null }
+interface Player { name: string; token: string; socket: WebSocket | null; bot: boolean; difficulty?: BotDifficulty; rematch: boolean; reconnectUntil: number | null }
 interface Room {
   aim: Move | null;
   code: string; players: [Player | null, Player | null]; game: Game; chat: RoomChat;
@@ -25,6 +25,7 @@ export async function startServer(options: ServerOptions = {}) {
   const ipRates = new Map<string, { count: number; since: number }>();
   const reconnectMs = options.reconnectMs ?? 120_000;
   const gameRandom = options.random ?? random;
+  const botDelay = () => options.botDelayMs ?? randomInt(2000, 5001);
   const root = resolve(options.staticDir ?? 'dist/client');
   const version = (JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { version: string }).version;
   let ready = true;
@@ -60,7 +61,7 @@ export async function startServer(options: ServerOptions = {}) {
     }
   };
   function snapshot(room: Room, seat: Seat): Snapshot {
-    return { room: room.code, you: seat, game: room.game, players: room.players.map(p => p ? ({ name: p.name, connected: p.bot || p.socket?.readyState === WebSocket.OPEN, bot: p.bot, rematch: p.rematch, reconnectUntil: p.reconnectUntil }) : null) as Snapshot['players'],
+    return { room: room.code, you: seat, game: room.game, players: room.players.map(p => p ? ({ name: p.name, connected: p.bot || p.socket?.readyState === WebSocket.OPEN, bot: p.bot, difficulty: p.difficulty, rematch: p.rematch, reconnectUntil: p.reconnectUntil }) : null) as Snapshot['players'],
       phase: room.phase, deadline: room.deadline, availableAt: room.availableAt, serverTime: Date.now(), turnSeconds: room.turnSeconds, round: room.round, wins: room.wins, endReason: room.endReason };
   }
   function broadcast(room: Room) { room.players.forEach((p, seat) => { if (p) send(p.socket, { type: 'snapshot', state: snapshot(room, seat as Seat) }); }); }
@@ -74,7 +75,7 @@ export async function startServer(options: ServerOptions = {}) {
     room.touched = Date.now(); broadcast(room);
   }
   function start(room: Room) {
-    room.phase = 'playing'; room.deadline = Date.now() + duration(room); room.botAt = Date.now() + (options.botDelayMs ?? 1100);
+    room.phase = 'playing'; room.deadline = Date.now() + duration(room); room.botAt = Date.now() + botDelay();
     room.endReason = null; room.availableAt = Date.now(); broadcast(room);
   }
   function move(room: Room, seat: Seat, input: Move, automatic = false) {
@@ -88,12 +89,12 @@ export async function startServer(options: ServerOptions = {}) {
     room.availableAt = Date.now() + (options.animationMs !== undefined ? Math.max(1, room.game.lastMove!.frames.length) * options.animationMs : turnMotionMs(room.game.lastMove!, beforeScores, room.game.scores, previousBoard));
     if (room.game.winner !== null) { finish(room, room.game.winner, 'Alle zehn Lamas sind überzeugt!'); return; }
     room.deadline = room.availableAt + duration(room);
-    room.botAt = room.availableAt + (options.botDelayMs ?? 1100); broadcast(room);
+    room.botAt = room.availableAt + botDelay(); broadcast(room);
   }
-  function player(name: unknown, socket: WebSocket | null, bot = false): Player {
+  function player(name: unknown, socket: WebSocket | null, bot = false, difficulty: BotDifficulty = 'medium'): Player {
     const text = typeof name === 'string' ? normalizeText(name) : '';
     if (!bot && (!text || Array.from(text).length > 20)) throw new Error('Wähle einen Namen mit 1 bis 20 Zeichen.');
-    return { name: bot ? 'Paco' : text, token: randomBytes(32).toString('hex'), socket, bot, rematch: false, reconnectUntil: null };
+    return { name: bot ? BOT_LEVELS[difficulty].name : text, token: randomBytes(32).toString('hex'), socket, bot, difficulty: bot ? difficulty : undefined, rematch: false, reconnectUntil: null };
   }
   function attach(ws: WebSocket, room: Room, seat: Seat) {
     const p = room.players[seat]!;
@@ -108,7 +109,7 @@ export async function startServer(options: ServerOptions = {}) {
       else { room.phase = 'paused'; room.remaining = duration(room); broadcast(room); }
     }
     else if (room.phase === 'paused' && connected(room)) {
-      room.phase = 'playing'; room.deadline = Date.now() + Math.max(1000, room.remaining); room.botAt = Date.now() + (options.botDelayMs ?? 1100); broadcast(room);
+      room.phase = 'playing'; room.deadline = Date.now() + Math.max(1000, room.remaining); room.botAt = Math.max(Date.now(), room.availableAt) + botDelay(); broadcast(room);
     } else broadcast(room);
     send(ws, { type: 'chat', messages: room.chat.messages });
   }
@@ -160,7 +161,7 @@ export async function startServer(options: ServerOptions = {}) {
             const p = player(data.name, ws);
             let code: string; do { code = randomBytes(4).toString('hex').toUpperCase(); } while (rooms.has(code));
             const turnSeconds = data.turnSeconds === 15 || data.turnSeconds === 60 ? data.turnSeconds : 30;
-            const room: Room = { aim: null, code, players: [p, data.bot === true ? player('', null, true) : null], game: newGame(gameRandom), chat: new RoomChat(), phase: 'waiting', deadline: null, remaining: 0, availableAt: 0, botAt: 0, turnSeconds, round: 1, wins: [0, 0], endReason: null, touched: Date.now() };
+            const room: Room = { aim: null, code, players: [p, data.bot === true ? player('', null, true, botDifficulty(data.difficulty)) : null], game: newGame(gameRandom), chat: new RoomChat(), phase: 'waiting', deadline: null, remaining: 0, availableAt: 0, botAt: 0, turnSeconds, round: 1, wins: [0, 0], endReason: null, touched: Date.now() };
             rooms.set(code, room); attach(ws, room, 0); return;
           }
           const code = typeof data.room === 'string' ? data.room.trim().toUpperCase() : '';
@@ -227,7 +228,7 @@ export async function startServer(options: ServerOptions = {}) {
         continue;
       }
       if (room.phase === 'playing' && connected(room) && now >= room.availableAt) {
-        if (room.players[room.game.turn]?.bot && now >= room.botAt) move(room, room.game.turn, botMove(room.game));
+        if (room.players[room.game.turn]?.bot && now >= room.botAt) move(room, room.game.turn, botMove(room.game, room.players[room.game.turn]?.difficulty));
         else if (room.deadline && now >= room.deadline) move(room, room.game.turn, room.aim ?? { side: 'top', lane: 0 }, true);
       }
       if (now - room.touched > 30 * 60_000 && (room.phase === 'waiting' || room.phase === 'finished')) {

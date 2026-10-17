@@ -41,6 +41,11 @@ body[data-theme=retro] .score-popup{color:#c91cbd;text-shadow:0 2px #fff5cf,2px 
 body[data-theme=retro] .score-popup.opponent-points{color:#6158dd}
 .llama-life{display:block;width:100%;transform-origin:center bottom}
 .llama-eyes{transform-box:fill-box;transform-origin:center}
+.llama-speaking-mouth{display:none}.is-speaking .llama-speaking-mouth{display:inline}
+.is-speaking .llama-mouth-open{transform-box:fill-box;transform-origin:center;animation:llama-talk .32s ease-in-out infinite}
+@keyframes llama-talk{0%,100%{scale:1 .25}25%{scale:.9 1}48%{scale:1.05 .35}73%{scale:.95 .85}}
+body.motion-off .llama-speaking-mouth{display:none}
+@media(prefers-reduced-motion:reduce){.llama-speaking-mouth{display:none!important}}
 .mini-llama{position:relative;transform-origin:center bottom}
 .mini-llama.is-crossing{z-index:3}
 .mini-llama.is-crossing .llama-life{transform:scaleX(-1);animation:llama-stride .32s ease-in-out infinite alternate}
@@ -69,6 +74,8 @@ body.motion-off .board-effects{display:none}
 .queue-wheel #next-tiles>div:nth-child(3){left:0;top:50%;transform:translateY(-50%)}
 .queue-wheel .tile-art{display:block;width:100%;height:100%}
 .queue-wheel .tile-art svg{height:100%}
+.queue-wheel [data-team="0"]{--queue-team:#da342b}.queue-wheel [data-team="1"]{--queue-team:#5553bf}
+.queue-wheel #current-tile[data-team],.queue-wheel #next-tiles>div[data-team],body[data-theme=retro] .queue-wheel #current-tile[data-team],body[data-theme=retro] .queue-wheel #next-tiles>div[data-team]{border:2px solid var(--queue-team);box-shadow:0 3px 0 color-mix(in srgb,var(--queue-team),#342817 35%),0 0 0 1px var(--queue-team)}
 .tile-queue .queue-hint{margin:0;text-align:left;max-width:90px}
 body[data-theme=retro] .wheel-plate{filter:saturate(1.4);border-color:#b79526}
 
@@ -129,6 +136,8 @@ body[data-theme=retro] .result-card{background:#ececd6;border:3px solid;border-c
 .endgame-team[data-mood=happy] .retro-follower{animation:result-llama-cheer 1.6s ease-in-out infinite;animation-delay:calc(var(--i) * -190ms);transform-origin:center bottom}
 .endgame-team[data-mood=sad] .endgame-llama{transform:translateY(7px) rotate(9deg);animation:result-llama-sigh 3.6s ease-in-out infinite;animation-delay:calc(var(--i) * -240ms)}
 .endgame-team[data-mood=sad] .retro-follower{filter:saturate(.65);transform:scale(.98,.94);transform-origin:center bottom}
+.endgame-scene .result-follower{width:116%;max-width:none;margin-left:-8%}
+.endgame-team[data-mood=happy] .result-mouth{animation:result-laugh 1.6s ease-in-out infinite;animation-delay:calc(var(--i) * -190ms);transform-box:fill-box;transform-origin:center top}
 .endgame-scene .retro-eyelid{animation:result-llama-blink 7s linear infinite;animation-delay:calc(var(--i) * -1.7s)}
 .endgame-team figcaption{font-size:11px;font-weight:700;color:#a13539;overflow-wrap:anywhere;margin-top:10px;line-height:1.3}
 .endgame-team[data-team="1"] figcaption{color:#3e56a7}.endgame-team figcaption small{display:block;font-size:7px;letter-spacing:1px;margin-top:3px;color:#505b30}
@@ -137,6 +146,7 @@ body[data-theme=retro] .result-card{background:#ececd6;border:3px solid;border-c
 @keyframes result-llama-hop{0%,55%,100%{translate:0 0}20%{translate:0 -16px}35%{translate:0 1px}42%{translate:0 -6px}}
 @keyframes result-llama-cheer{0%,55%,100%{scale:1 1;rotate:0deg}12%{scale:1.04 .94;rotate:-4deg}22%{scale:.97 1.04;rotate:4deg}35%{scale:1.04 .96;rotate:-2deg}}
 @keyframes result-llama-sigh{0%,100%{translate:0 0;scale:1 1}45%{translate:0 3px;scale:1.02 .96}65%{translate:0 1px;scale:1 1}}
+@keyframes result-laugh{0%,55%,100%{scale:1 1}15%,35%{scale:1 .75}25%,45%{scale:1 1.08}}
 @keyframes result-llama-blink{0%,93%,97%,100%{opacity:0}94%,96%{opacity:1}}
 @keyframes result-confetti{0%{translate:0 -8px;rotate:0deg;opacity:0}8%{opacity:1}85%{opacity:.9}100%{translate:-14px 190px;rotate:260deg;opacity:0}}
 @media(max-width:680px){.result-card{--result-inset:20px}.endgame-herd{height:95px}.endgame-llama{width:37px;height:76px}.endgame-scene{min-height:165px}.result-card h2{font-size:30px}.result-card h3{font-size:18px}}
@@ -144,6 +154,8 @@ body[data-theme=retro] .result-card{background:#ececd6;border:3px solid;border-c
 body.motion-off .result-confetti{display:none}
 
 /* Matching control heights, with connection status before every action. */
+.cpu-choice{margin-top:14px;text-align:left}.cpu-choice .small-note{margin:7px 0 0;line-height:1.5}
+@media(max-width:680px){.setup-panel>.cpu-choice,.setup-panel>#create,.setup-panel>#practice{grid-column:1/-1}.cpu-choice .small-note{text-align:left;font-size:10px}}
 .site-header nav,body[data-theme=retro] .site-header nav{gap:8px;align-items:center}
 .site-header nav>button,body[data-theme=retro] .site-header nav>button{display:inline-flex;align-items:center;justify-content:center;height:34px;min-height:34px;padding:0 10px;line-height:1;white-space:nowrap}
 .site-header nav>.icon-button,body[data-theme=retro] .site-header nav>.icon-button{width:34px;min-width:34px;padding:0}

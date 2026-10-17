@@ -9,7 +9,7 @@ import { BoardFeedback } from './board-feedback';
 import { HerdMotion } from './herd-motion';
 import { resultScene } from './result-scene';
 import { Connection, roomCode, type ConnectionStatus } from './network';
-import { newGame, push, insert, gravity, cloneBoard, lamaCounts, TILE_INFO, TILES, type Board, type Move, type Seat, type Tile } from '../shared/game';
+import { newGame, push, insert, gravity, cloneBoard, lamaCounts, TILE_INFO, TILES, BOT_LEVELS, botDifficulty, type Board, type Move, type Seat, type Tile } from '../shared/game';
 import type { Snapshot, ServerMessage, ChatMessage } from '../shared/protocol';
 declare const __APP_VERSION__: string;
 
@@ -21,6 +21,8 @@ let status: ConnectionStatus = 'idle';
 let clockOffset = 0, renderedRevision = -1, animationGeneration = 0, animating = false, movePending = false;
 let pendingMoveTimer: ReturnType<typeof setTimeout>;
 let resultRevealPending = false;
+let awaitingRoundStart = false;
+let cpuDifficulty = botDifficulty(storage.get('lama:cpu-difficulty'));
 let sound = (storage.get('lama:sfx') ?? storage.get('lama:sound')) !== 'off';
 const audio = new GameAudio(); audio.setEnabled(sound);
 const music = new GameMusic(); let musicEnabled = storage.get('lama:music') !== 'off'; music.setEnabled(musicEnabled);
@@ -68,10 +70,25 @@ app.innerHTML = `
 <dialog id="rules"><button class="dialog-close" id="rules-close" aria-label="Schließen">×</button><p class="eyebrow">KURZ ERKLÄRT</p><h2>Schieben. Kombinieren.<br/><em>Lamas gewinnen.</em></h2><p>Ihr spielt abwechselnd auf demselben 5×5-Feld. Setze den aktuellen Stein an einer Randposition von <b>oben, links oder rechts</b> ein. Nur Steine mit direktem Kontakt werden mitgeschoben. An der ersten Lücke endet die Schiebekette; Steine dahinter bleiben stehen. Ist der Streifen lückenlos voll, fällt der letzte Stein hinaus. Anschließend wirkt die Schwerkraft.</p><p>Mindestens drei gleiche Symbole in einer waagerechten oder senkrechten Reihe verschwinden. Vier zählen doppelt, fünf dreifach. Entsteht danach eine weitere Reihe, zählen ihre Punkte mit dem nächsten Kaskadenfaktor (×2, ×3, …). Leere Felder werden mit euren nächsten Zügen gefüllt.</p><p>Ihr startet mit je fünf Lamas. Je <b>60 Punkte Vorsprung</b> wechselt eines die Seite. Mit <b>300 Punkten Vorsprung</b> gewinnst du alle zehn und die Partie.</p><p>Nach Ablauf der Zugzeit wird dein Stein an der zuletzt erkannten Einschubposition eingesetzt (ohne Auswahl oben links). Bei Verbindungsabbruch pausiert die Partie für bis zu <b>120 Sekunden</b>. Danach gewinnt der verbliebene Spieler.</p><div class="keyboard-tip">Tastatur: <kbd>1</kbd>–<kbd>5</kbd> von oben · <kbd>Shift</kbd> + Zahl von links · <kbd>Alt</kbd> + Zahl von rechts</div><p class="small-note">Eigenständiger Früchte-Nachbau, inspiriert vom ICQ-Klassiker. Symbolhäufigkeiten und Punktewerte sind die Abstimmung dieser Version.</p><button class="button primary" id="rules-play">Alles klar, los geht’s</button></dialog>
 <dialog id="confirm"><h2 id="confirm-title">Partie verlassen?</h2><p id="confirm-copy"></p><div class="confirm-buttons"><button class="button secondary" id="confirm-no">Weiterspielen</button><button class="button primary" id="confirm-yes">Bestätigen</button></div></dialog>`;
 
+$('practice').insertAdjacentHTML('beforebegin', `<div class="cpu-choice"><label for="cpu-difficulty">CPU-Gegner</label><select id="cpu-difficulty" aria-describedby="cpu-description">${Object.entries(BOT_LEVELS).map(([key, level]) => `<option value="${key}">${level.label} · ${level.name}</option>`).join('')}</select><p id="cpu-description" class="small-note"></p></div>`);
+function updateCpuChoice() {
+  const level = BOT_LEVELS[cpuDifficulty];
+  $<HTMLSelectElement>('cpu-difficulty').value = cpuDifficulty;
+  $('practice').innerHTML = `Mit ${level.name} üben <span>✧</span>`;
+  $('cpu-description').textContent = level.description;
+}
+$('cpu-difficulty').onchange = () => {
+  cpuDifficulty = botDifficulty($<HTMLSelectElement>('cpu-difficulty').value);
+  storage.set('lama:cpu-difficulty', cpuDifficulty); updateCpuChoice();
+  if (!state) renderStatus();
+};
+updateCpuChoice();
+
 function notify(message: string) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 6500); }
 let toastTimer: ReturnType<typeof setTimeout>;
 const boardFeedback = new BoardFeedback($('board-controls').parentElement!, $('board-effects'), motionEnabled);
 const herdMotion = new HerdMotion($('herd-llamas'), () => motionEnabled() && (state?.phase !== 'finished' || animating));
+audio.onLamaVoice = voice => herdMotion.speak(voice);
 function updateSfx() { $('sfx-toggle').setAttribute('aria-label', sound ? 'Soundeffekte ausschalten' : 'Soundeffekte einschalten'); $('sfx-toggle').title = sound ? 'Soundeffekte ausschalten' : 'Soundeffekte einschalten'; $('sfx-toggle').setAttribute('aria-pressed', String(sound)); }
 function updateMusic() { $('music').setAttribute('aria-label', musicEnabled ? 'Hintergrundmusik ausschalten' : 'Hintergrundmusik einschalten'); $('music').title = musicEnabled ? 'Hintergrundmusik ausschalten' : 'Hintergrundmusik einschalten'; $('music').setAttribute('aria-pressed', String(musicEnabled)); }
 $('music').onclick = () => { musicEnabled = !musicEnabled; storage.set('lama:music', musicEnabled ? 'on' : 'off'); music.setEnabled(musicEnabled); updateMusic(); }; updateMusic();
@@ -130,12 +147,13 @@ function name(): string | null {
   if (!n || Array.from(n).length > 20) { notify('Verrate uns deinen Namen (1–20 Zeichen).'); input.focus(); return null; }
   storage.set('lama:name', n); return n;
 }
-function create(bot: boolean) { const n = name(); if (n) connection.connect({ type: 'create', name: n, bot, turnSeconds: Number($<HTMLSelectElement>('turn-time').value) }); }
+function create(bot: boolean) { const n = name(); if (n) { awaitingRoundStart = true; connection.connect({ type: 'create', name: n, bot, difficulty: bot ? cpuDifficulty : undefined, turnSeconds: Number($<HTMLSelectElement>('turn-time').value) }); } }
 $('create').onclick = () => create(false); $('practice').onclick = () => create(true);
-$('join-form').onsubmit = event => { event.preventDefault(); const n = name(); if (!n) return; const room = roomCode($<HTMLInputElement>('room-input').value); if (!room) { notify('Gib den achtstelligen Raumcode oder den vollständigen Einladungslink ein.'); return; } connection.connect({ type: 'join', room, name: n }); };
+$('join-form').onsubmit = event => { event.preventDefault(); const n = name(); if (!n) return; const room = roomCode($<HTMLInputElement>('room-input').value); if (!room) { notify('Gib den achtstelligen Raumcode oder den vollständigen Einladungslink ein.'); return; } awaitingRoundStart = true; connection.connect({ type: 'join', room, name: n }); };
 function reset() {
   music.setPlaying(false);
   resultRevealPending = false;
+  awaitingRoundStart = false;
   document.body.classList.remove('in-room');
   cancelVisuals(); audio.cancel();
   state = null; renderedRevision = -1; movePending = false; chatMessages = []; chatInitialized = false; chatDrafts.clear(); unread = 0;
@@ -165,9 +183,10 @@ function receive(message: ServerMessage) {
     renderPlayers(); renderQueue(!!moved, previous?.game.board);
     if (!moved && !animating) renderHerd();
     $('round').textContent = String(state.round); $('wins').textContent = state.wins.join(' : ');
-    $('mode-badge').textContent = state.players[1]?.bot ? 'TRAINING MIT PACO' : `RAUM ${state.room}`;
-    $('room-title').textContent = state.players[1]?.bot ? 'Paco nimmt die Herausforderung an.' : 'Ein Platz für zwei.';
-    $('room-help').textContent = state.players[1]?.bot ? 'Paco plant einen Zug voraus. Übe deine Kombinationen und fordere danach Freunde heraus.' : 'Der Raum ist nur über euren Code erreichbar. Euer Chat bleibt am Spieltisch.';
+    const cpu = BOT_LEVELS[botDifficulty(state.players[1]?.difficulty)];
+    $('mode-badge').textContent = state.players[1]?.bot ? `TRAINING · ${cpu.name.toUpperCase()} · ${cpu.label.toUpperCase()}` : `RAUM ${state.room}`;
+    $('room-title').textContent = state.players[1]?.bot ? `${cpu.name} nimmt die Herausforderung an.` : 'Ein Platz für zwei.';
+    $('room-help').textContent = state.players[1]?.bot ? cpu.description : 'Der Raum ist nur über euren Code erreichbar. Euer Chat bleibt am Spieltisch.';
     $('copy-link').hidden = !!state.players[1]?.bot;
     $('invite-link').hidden = !!state.players[1]?.bot;
     document.querySelector<HTMLLabelElement>('label[for="invite-link"]')!.hidden = !!state.players[1]?.bot;
@@ -180,6 +199,11 @@ function receive(message: ServerMessage) {
       else audio.cancel();
     }
     if (state.phase === 'paused') audio.cancel();
+    if (state.phase === 'waiting') awaitingRoundStart = true;
+    const rematchStarted = state.phase === 'playing' && previous && state.round > previous.round;
+    if (state.phase === 'playing' && (awaitingRoundStart || rematchStarted)) {
+      awaitingRoundStart = false; audio.playStart();
+    }
     herdMotion.refresh(); renderStatus(); updateControls();
   } else if (message.type === 'chat') {
     for (const m of message.messages) if (m.seat === state?.you) chatDrafts.delete(m.requestId);
@@ -301,7 +325,7 @@ $('board-controls').parentElement!.addEventListener('click', event => {
 window.addEventListener('resize', () => { layoutSlotButtons(); updateInsertionPreview(); });
 function scheduleLamaIdle() {
   setTimeout(() => {
-    if (state?.phase === 'playing' && status === 'connected' && !animating && !movePending && audio.playIdleLama()) herdMotion.react();
+    if (state?.phase === 'playing' && status === 'connected' && !animating && !movePending) audio.playIdleLama();
     scheduleLamaIdle();
   }, 20000 + Math.random() * 25000);
 }
@@ -488,6 +512,13 @@ function renderQueue(advance = false, previousBoard?: Board) {
   wheel.getAnimations({ subtree: true }).forEach(animation => animation.cancel());
   $('current-tile').innerHTML = fruit(queue[0]); $('next-tiles').innerHTML = queue.slice(1).map(t => `<div title="${tileName(t)}">${fruit(t)}</div>`).join('');
   $('current-tile').setAttribute('aria-label', 'Aktueller Stein: ' + tileName(queue[0]));
+  wheel.querySelectorAll<HTMLElement>('#current-tile,#next-tiles>div').forEach((element, index) => {
+    const team = ((state?.game.turn ?? 0) + index) % 2;
+    const owner = state?.players[team]?.name ?? `Spieler ${team + 1}`;
+    element.dataset.team = String(team);
+    element.title = `${tileName(queue[index])} · ${owner}`;
+    element.setAttribute('aria-label', `${index === 0 ? 'Aktueller Stein' : `Vorschau ${index}`}: ${tileName(queue[index])} für ${owner}`);
+  });
   if (advance) {
     queueWheelAngle -= 32;
     plate.style.rotate = queueWheelAngle + 'deg';
@@ -542,7 +573,7 @@ function renderStatus() {
   const overlay = $('board-overlay');
   overlay.hidden = !!state && state.phase !== 'waiting' && state.phase !== 'paused';
   if (!state) {
-    overlay.innerHTML = '<span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere Paco heraus.</p>';
+    overlay.innerHTML = `<span class="overlay-tag">DEIN NÄCHSTER LIEBLINGSKLASSIKER</span><h3>Ein Zug kann<br/>alles drehen.</h3><p>Lade einen Freund ein<br/>oder fordere ${BOT_LEVELS[cpuDifficulty].name} heraus.</p>`;
     $('turn-label').textContent = 'Ein kleines Duell wartet auf dich.'; $('move-feedback').textContent = 'Drei gleiche Früchte. Ein ziemlich guter Anfang.';
   } else {
     if (state.phase === 'waiting') overlay.innerHTML = `<span class="overlay-tag">DER TISCH IST GEDECKT</span><h3>Noch ein Lama<br/>fehlt.</h3><p>Teile deinen Einladungslink.<br/>Dein Freund kann direkt beitreten.</p><button id="overlay-copy" class="button primary">Link kopieren ⧉</button>`;

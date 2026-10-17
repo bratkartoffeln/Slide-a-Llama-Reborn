@@ -263,6 +263,20 @@ Originalmedien werden nicht als eigene oder frei lizenzierte Werke ausgegeben.
 
 ## Umsetzung und Abweichungen
 
+### Start-Jingle
+
+`public/audio/temple-start.wav` basiert auf **Fantasy Flute Stinger – Magical
+RPG Forest Victory** von **TommasoMotteran**, veröffentlicht am 26. September
+2026 auf [Freesound](https://freesound.org/people/TommasoMotteran/sounds/871764/).
+Lizenz: [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+Quelle: [MP3-Vorschau](https://cdn.freesound.org/previews/871/871764_18681946-hq.mp3).
+Bearbeitung: drei Sekunden, Mono-WAV mit 44.100 Hz und 16 Bit, kurze Ein- und
+Ausblendung. Der Pegel wurde anhand aktiver 50-ms-Abschnitte von sechs
+vorhandenen Spielsounds unter Einbeziehung ihrer Wiedergabelautstärke auf
+deren mittleren Pegel angeglichen; Spitzen bleiben unter Vollaussteuerung.
+Wiedergabe mit Lautstärke 0,35. Die Datei wird lokal ausgeliefert.
+Der kurze Fantasy-Flötenruf ergänzt das Tempel-Thema als Spielsignal.
+
 Aus den Referenzen übernommen: ICQ-artiger Fensterrahmen, Tempelbühne,
 Fruchtsymbole, Teamfarben und Geräuschcharakter. Die neuen Steinprofile,
 Sandsteinstruktur, Bruchstücke und aufsteigenden Punkte sind eigene CSS-/SVG-

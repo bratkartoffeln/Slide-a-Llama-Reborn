@@ -1,6 +1,6 @@
-import type { Game, Seat } from './game.js';
+import type { Game, Seat, BotDifficulty } from './game.js';
 export type Phase = 'waiting' | 'playing' | 'paused' | 'finished';
-export interface PublicPlayer { name: string; connected: boolean; bot: boolean; rematch: boolean; reconnectUntil: number | null }
+export interface PublicPlayer { name: string; connected: boolean; bot: boolean; difficulty?: BotDifficulty; rematch: boolean; reconnectUntil: number | null }
 export interface ChatMessage { id: number; requestId: string; seat: Seat; name: string; text: string; sentAt: number }
 export interface Snapshot {
   room: string; you: Seat; players: [PublicPlayer | null, PublicPlayer | null]; game: Game;
