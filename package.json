@@ -1,6 +1,6 @@
 {
   "name": "slide-a-llama-reborn",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "private": true,
   "type": "module",
   "description": "Slide-a-Llama: ein taktisches Früchte-Duell mit privaten Online-Spielräumen und Chat.",
@@ -14,12 +14,22 @@
     "build": "npm run check && vite build && tsc -p tsconfig.server.json",
     "start": "node dist/server/server/index.js",
     "test:browser": "playwright test",
-    "check:docker": "node scripts/check-docker.mjs"
+    "check:docker": "node scripts/check-docker.mjs",
+    "build:android": "npm run check && vite build --mode android",
+    "android:sync": "npm run build:android && cap sync android",
+    "android:apk": "node scripts/build-android-apk.mjs",
+    "android:open": "cap open android",
+    "test:android": "playwright test --config playwright.android.config.ts"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/clipboard": "8.0.1",
+    "@capacitor/core": "8.5.3",
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.3",
     "@playwright/test": "^1.56.0",
     "@types/node": "^22.18.0",
     "@types/ws": "^8.18.0",

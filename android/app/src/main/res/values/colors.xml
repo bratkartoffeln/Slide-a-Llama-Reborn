@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="llama_background">#244C40</color>
+    <color name="llama_accent">#F7EACA</color>
+</resources>

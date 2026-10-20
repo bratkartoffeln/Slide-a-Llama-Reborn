@@ -1,0 +1,35 @@
+:root {
+  --app-safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --app-safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --app-safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --app-safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+}
+.play-actions { display:flex; align-items:center; gap:14px }
+#fullscreen-toggle { width:auto; min-height:34px; padding:6px 10px }
+.fullscreen-toolbar { position:fixed; top:calc(6px + var(--app-safe-top)); left:calc(12px + var(--app-safe-left)); right:calc(12px + var(--app-safe-right)); z-index:950; display:flex; justify-content:space-between; align-items:center; gap:12px; color:#fff8e4; font:600 12px sans-serif }
+.fullscreen-toolbar[hidden] { display:none }
+.fullscreen-toolbar button { width:auto; min-height:36px; padding:8px 12px }
+body.game-fullscreen { overflow:hidden }
+body.game-fullscreen::before { content:''; position:fixed; inset:0; z-index:899; background:#183b31 }
+body.game-fullscreen .arena {
+  position:fixed; inset:calc(52px + var(--app-safe-top)) calc(12px + var(--app-safe-right)) calc(12px + var(--app-safe-bottom)) calc(12px + var(--app-safe-left));
+  z-index:900; margin:auto; height:max-content; min-width:0; max-width:none; flex:none;
+}
+body.game-fullscreen .arena>.retro-game-caption,
+body.game-fullscreen .arena>.move-feedback,
+body.game-fullscreen .arena>.resign { display:none }
+body.game-fullscreen[data-theme=modern] .arena { padding:10px }
+body.game-fullscreen[data-theme=modern] #board-controls { grid-template-columns:repeat(7,minmax(0,1fr)); grid-template-rows:repeat(6,minmax(0,1fr)); aspect-ratio:7/6; gap:2px; margin:0 8px }
+body.game-fullscreen[data-theme=modern] .temple-top { display:none }
+body.game-fullscreen[data-theme=modern] .tile { min-width:0; min-height:0 }
+body.game-fullscreen[data-theme=modern] .move-button { min-height:0; padding:2px; aspect-ratio:1; margin:0 }
+body.game-fullscreen[data-theme=modern] .temple-stage .herd-llamas { height:clamp(32px,12dvh,80px) }
+body.game-fullscreen #toast { z-index:1100 }
+:root[data-native=true] body { padding:var(--app-safe-top) var(--app-safe-right) var(--app-safe-bottom) var(--app-safe-left) }
+:root[data-native=true] input, :root[data-native=true] select { font-size:16px }
+:root[data-native=true] dialog { max-height:calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 24px) }
+.native-server-setting { grid-column:1/-1; margin-top:20px; border-top:1px solid var(--line); padding-top:12px }
+.native-server-setting .button { margin-top:10px }
+.native-server-setting p { overflow-wrap:anywhere }
+:root[data-app-active=false] * { animation-play-state:paused !important }
+@media(max-width:680px) { .play-heading { flex-wrap:wrap; gap:10px } .play-actions { margin-left:auto } }

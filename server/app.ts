@@ -132,7 +132,7 @@ export async function startServer(options: ServerOptions = {}) {
     if (!ready || deployment.active || req.url !== '/ws' || connections.size >= 1000) { reject(503); return; }
     const origin = req.headers.origin;
     try {
-      if (options.allowedOrigins?.length ? !origin || !options.allowedOrigins.includes(origin) : origin && new URL(origin).host !== req.headers.host) { reject(403); return; }
+      if (options.allowedOrigins?.length ? !origin || !options.allowedOrigins.includes(origin) : origin && origin !== 'https://localhost' && new URL(origin).host !== req.headers.host) { reject(403); return; }
     } catch { reject(403); return; }
     const ip = req.socket.remoteAddress ?? 'unknown', now = Date.now();
     let rate = ipRates.get(ip);
