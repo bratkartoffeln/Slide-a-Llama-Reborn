@@ -101,7 +101,7 @@ test('Theme and motion preferences persist, and disabling animations settles an 
   await page.locator('#motion-toggle').click();
   await expect(page.locator('body')).toHaveClass(/motion-off/);
   await expect(page.locator('#motion-toggle')).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.locator('#turn-label')).toContainText('Du bist dran', { timeout: 8000 });
+  await expect(page.locator('#turn-label')).toContainText('Du bist dran', { timeout: Math.max(8000, availableAt - Date.now() + 6500) });
   await expect(page.locator('.move-button:enabled')).toHaveCount(15, { timeout: Math.max(5000, availableAt - Date.now() + 1500) });
   expect(await page.locator('#board-controls').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length)).toBe(0);
   const code = await page.locator('#room-code').textContent();

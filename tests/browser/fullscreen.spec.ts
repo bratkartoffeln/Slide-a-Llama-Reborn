@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 
 for (const theme of ['retro', 'modern']) {
   test(`${theme}: fullscreen maximizes the playable board and fits after rotation`, async ({ page }) => {
+    // Linux Chromium cannot resize its OS window while the native fullscreen API is active.
+    // Exercise responsive layout independently; the browser API has its own test below.
+    await page.addInitScript(() => Object.defineProperty(document, 'fullscreenEnabled', { value: false }));
     await page.goto('/');
     if (theme === 'modern') await page.locator('#theme-toggle').click();
     await page.locator('#name').fill('Vollbild');
@@ -33,6 +36,16 @@ for (const theme of ['retro', 'modern']) {
     await page.locator('#resign').click(); await expect(page.locator('#confirm')).toBeVisible();
   });
 }
+
+test('Browser fullscreen enters and exits through the visible controls', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#fullscreen-toggle').click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement === document.documentElement)).toBe(true);
+  await expect(page.locator('#fullscreen-close')).toBeVisible();
+  await page.locator('#fullscreen-close').click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement === null)).toBe(true);
+  await expect(page.locator('body')).not.toHaveClass(/game-fullscreen/);
+});
 
 test('Fullscreen denied by the browser still fits and Escape restores the page', async ({ page }) => {
   await page.addInitScript(() => { document.documentElement.requestFullscreen = () => Promise.reject(new Error('Unavailable')); });
