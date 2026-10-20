@@ -1,6 +1,6 @@
 ﻿# Slide-a-Llama Reborn
 
-Version **0.1.15** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
+Version **0.1.16** — spielbarer Nachbau des klassischen Früchte-Duells mit privaten
 Online-Räumen, Chat, Revanche und Trainingsgegner. Deutsche Oberfläche mit modernem
 Design und umschaltbarem ICQ-Retro-Layout, Maus-, Touch- und Tastaturbedienung.
 
@@ -53,6 +53,15 @@ Version. Der Poker-Modus mancher Originalausgaben ist nicht enthalten.
 Grundlage und Quellen: [SPIELREGELN.md](SPIELREGELN.md).
 
 ## Layout, Animationen und Ton
+
+**Vollbild** am Spieltisch vergrößert das Spielfeld auf die verfügbare Breite und
+Höhe. Vorschau, Punktestand und Lamas bleiben sichtbar; Hoch- und Querformat
+werden berücksichtigt. **Vollbild beenden** oder `Esc` kehrt zurück.
+Auch ohne Unterstützung der Browser-Vollbild-API wird der Spieltisch maximiert.
+
+Eine Android-APK mit lokal mitgelieferter Oberfläche und Medien lässt sich über
+`npm run android:apk` bauen. Installation, Serverauswahl und Prüfungen:
+[ANDROID.md](ANDROID.md).
 
 Oben mit **ICQ-Retro** zwischen modernem Design und klassischer Darstellung
 wechseln, auch während einer Partie. Der Retro-Modus verwendet recherchierte
@@ -202,7 +211,9 @@ Chat: 300 Unicode-Zeichen, 50 Nachrichten Verlauf, 500 ms Mindestabstand und
 Deduplizierung pro Spieler. Benutzertexte werden sicher als Text ausgegeben.
 Origin-Prüfung und Limits für Nachrichten, Paketgrößen, Verbindungen und Räume
 begrenzen Missbrauch. `ALLOWED_ORIGINS` akzeptiert eine kommaseparierte Origin-Liste;
-ohne Liste sind Browser vom selben Host und native Clients ohne Origin erlaubt.
+ohne Liste sind Browser vom selben Host, die Android-App unter `https://localhost`
+und native Clients ohne Origin erlaubt. Eine explizite Liste muss für die APK
+auch `https://localhost` enthalten.
 
 Räume und Chat liegen im Arbeitsspeicher eines Serverprozesses. Ein Neustart
 beendet Sitzungen; es gibt keine Konten oder dauerhafte Historie. Mehrere

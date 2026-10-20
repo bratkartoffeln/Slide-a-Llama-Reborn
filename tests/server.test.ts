@@ -33,6 +33,19 @@ async function pair(url: string) {
   const s = (await a.wait('snapshot', m => m.state.phase === 'playing')).state;
   return { a, b, welcome, s };
 }
+
+test('Android local origin is allowed by default; explicit origin lists retain control', async t => {
+  for (const allowedOrigins of [undefined, ['https://spiel.example'], ['https://localhost']]) {
+    const server = await startServer({ port: 0, allowedOrigins }); t.after(() => server.close());
+    const socket = new WebSocket(server.url.replace('http:', 'ws:') + '/ws', { origin: 'https://localhost' });
+    const result = await new Promise<number>((resolve, reject) => {
+      socket.once('open', () => { resolve(101); socket.close(); });
+      socket.once('unexpected-response', (_req, res) => { res.resume(); resolve(res.statusCode!); socket.terminate(); });
+      socket.on('error', error => { if (!allowedOrigins?.includes('https://spiel.example')) reject(error); });
+    });
+    assert.equal(result, allowedOrigins?.includes('https://spiel.example') ? 403 : 101);
+  }
+});
 test('Timeout uses the latest valid slot of this turn and rejects stale, opposing and malformed selections', async t => {
   const server = await startServer({ port: 0, animationMs: 0, turnMs: 300 }); t.after(() => server.close());
   const { a, b } = await pair(server.url);

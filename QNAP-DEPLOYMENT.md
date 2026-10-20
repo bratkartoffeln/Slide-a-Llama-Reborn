@@ -4,7 +4,7 @@
 
 Vorlage: `F:\Daten\DEV\Games\RPS-Online-reborn`, untersucht am 16.10.2026.
 Ziel: `F:\Daten\DEV\Games\Slide-a-Llama-Reborn`.
-Version 0.1.15 enthält Anwendungscode, Paketdateien, Build und Tests.
+Version 0.1.16 enthält Anwendungscode, Paketdateien, Build und Tests.
 Browserclient und WebSocket-Server werden gemeinsam unter `dist/` gebaut.
 Lokaler Anwendungsbuild und Multiplayerprüfungen sind erfolgreich. Der Caddy-
 Imagebuild und die NAS-HTTPS-Prüfung der dynv6-Korrektur sind unten dokumentiert.
@@ -21,8 +21,9 @@ Der Node-24-Dockerfile verwendet folgenden implementierten Vertrag:
 - Der Server beachtet `HOST=0.0.0.0` und `PORT=2568`, liefert HTTP `/ready` mit
   Status 200 erst bei Bereitschaft und unterstützt die gewünschten WebSockets.
 - Der Server wertet `ALLOWED_ORIGINS` als kommaseparierte Origin-Liste aus.
-  Ohne Liste erlaubt er Browser-Verbindungen vom selben Host und native Clients
-  ohne Origin-Header. Bei gesetzter Liste muss der Origin enthalten sein.
+  Ohne Liste erlaubt er Browser-Verbindungen vom selben Host, den Android-Ursprung
+  `https://localhost` und native Clients ohne Origin-Header. Bei gesetzter Liste
+  muss der Origin enthalten sein; für die APK zusätzlich `https://localhost` aufnehmen.
 
 Vor einem anderen Technikstapel Dockerfile, Healthcheck und Proxyziel anpassen.
 Der Früchte-Modus ist implementiert; Regeln und Abweichungen stehen in

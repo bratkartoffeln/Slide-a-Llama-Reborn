@@ -1,8 +1,9 @@
 import type { ServerMessage } from '../shared/protocol.js';
+import { serverEndpoint, sessionKey } from './server-config';
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'ended';
 type Session = { room: string; token: string };
 function read(room: string): Session | null {
-  try { const token = sessionStorage.getItem('lama:session:' + room); return token ? { room, token } : null; } catch { return null; }
+  try { const token = sessionStorage.getItem(sessionKey(room)); return token ? { room, token } : null; } catch { return null; }
 }
 export function roomCode(input: string): string {
   const s = input.trim();
@@ -30,7 +31,7 @@ export class Connection {
     const generation = ++this.generation;
     clearTimeout(this.retry);
     this.setStatus(payload.type === 'resume' ? 'reconnecting' : 'connecting');
-    const url = new URL('/ws', window.location.href); url.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = new URL('/ws', serverEndpoint()); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(url); this.ws = ws;
     const timeout = setTimeout(() => { if (generation === this.generation && this.status !== 'connected') ws.close(); }, 10_000);
     ws.onopen = () => { if (generation === this.generation) ws.send(JSON.stringify(payload)); };
@@ -40,7 +41,7 @@ export class Connection {
       try { message = JSON.parse(event.data); } catch { return; }
       if (message.type === 'welcome') {
         clearTimeout(timeout); this.session = { room: message.room, token: message.token }; this.seat = message.seat; this.attempt = 0; this.retryStarted = 0;
-        try { sessionStorage.setItem('lama:session:' + message.room, message.token); } catch { /* optional storage */ }
+        try { sessionStorage.setItem(sessionKey(message.room), message.token); } catch { /* optional storage */ }
         this.setStatus('connected');
         for (const pending of this.chatPending.values()) ws.send(JSON.stringify(pending));
       }
@@ -70,7 +71,7 @@ export class Connection {
   }
   disconnect(forget = true) {
     ++this.generation; clearTimeout(this.retry);
-    if (forget && this.session) { try { sessionStorage.removeItem('lama:session:' + this.session.room); } catch {} }
+    if (forget && this.session) { try { sessionStorage.removeItem(sessionKey(this.session.room)); } catch {} }
     this.ws?.close(); this.ws = null; this.session = null; this.chatPending.clear(); this.setStatus('idle');
   }
   leave() { this.send({ type: 'leave' }); this.disconnect(); }

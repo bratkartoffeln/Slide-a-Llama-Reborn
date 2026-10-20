@@ -1,6 +1,10 @@
 import './style.css';
 import './retro.css';
 import './feedback.css';
+import './fullscreen.css';
+import { installFullscreen } from './fullscreen';
+import { installNativeApp, minimizeNativeApp, copyText } from './native-app';
+import { invitationUrl, isNativeApp, serverEndpoint, saveServer, validateInvitation } from './server-config';
 import { fruit, llama, arrow } from './art';
 import { GameAudio, GameMusic } from './sound';
 import { FEEDBACK_TIMING } from './sound-events';
@@ -84,6 +88,23 @@ $('cpu-difficulty').onchange = () => {
 };
 updateCpuChoice();
 
+const fullscreenToggle = document.createElement('button');
+fullscreenToggle.id = 'fullscreen-toggle'; fullscreenToggle.className = 'theme-toggle';
+fullscreenToggle.textContent = 'Vollbild ⤢'; fullscreenToggle.setAttribute('aria-label', 'Spielfeld im Vollbild maximieren');
+fullscreenToggle.setAttribute('aria-pressed', 'false');
+const playActions = document.createElement('div'); playActions.className = 'play-actions';
+$('leave').before(playActions); playActions.append(fullscreenToggle, $('leave'));
+const fullscreen = installFullscreen($('arena'), fullscreenToggle);
+document.documentElement.dataset.native = String(isNativeApp());
+if (isNativeApp()) {
+  $('setup').insertAdjacentHTML('beforeend', '<div class="native-server-setting"><label for="server-address">Spielserver</label><input id="server-address" type="url" inputmode="url" autocomplete="url" spellcheck="false"/><button id="save-server" class="button secondary">Server speichern</button><p class="small-note" id="server-message" role="status">HTTPS-Adresse für Online- und CPU-Partien.</p></div>');
+  $<HTMLInputElement>('server-address').value = serverEndpoint();
+  $('save-server').onclick = () => {
+    try { saveServer($<HTMLInputElement>('server-address').value); location.reload(); }
+    catch (error) { $('server-message').textContent = error instanceof Error ? error.message : String(error); }
+  };
+}
+
 function notify(message: string) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 6500); }
 let toastTimer: ReturnType<typeof setTimeout>;
 const boardFeedback = new BoardFeedback($('board-controls').parentElement!, $('board-effects'), motionEnabled);
@@ -149,7 +170,14 @@ function name(): string | null {
 }
 function create(bot: boolean) { const n = name(); if (n) { awaitingRoundStart = true; connection.connect({ type: 'create', name: n, bot, difficulty: bot ? cpuDifficulty : undefined, turnSeconds: Number($<HTMLSelectElement>('turn-time').value) }); } }
 $('create').onclick = () => create(false); $('practice').onclick = () => create(true);
-$('join-form').onsubmit = event => { event.preventDefault(); const n = name(); if (!n) return; const room = roomCode($<HTMLInputElement>('room-input').value); if (!room) { notify('Gib den achtstelligen Raumcode oder den vollständigen Einladungslink ein.'); return; } awaitingRoundStart = true; connection.connect({ type: 'join', room, name: n }); };
+$('join-form').onsubmit = event => {
+  event.preventDefault(); const n = name(); if (!n) return;
+  const input = $<HTMLInputElement>('room-input').value;
+  const room = roomCode(input);
+  if (!room) { notify('Gib den achtstelligen Raumcode oder den vollständigen Einladungslink ein.'); return; }
+  try { validateInvitation(input); } catch (error) { notify(error instanceof Error ? error.message : String(error)); return; }
+  awaitingRoundStart = true; connection.connect({ type: 'join', room, name: n });
+};
 function reset() {
   music.setPlaying(false);
   resultRevealPending = false;
@@ -164,7 +192,7 @@ function reset() {
 $('leave').onclick = () => confirm('Raum verlassen?', state?.phase === 'playing' || state?.phase === 'paused' ? 'Wenn du gehst, gewinnt dein Gegenüber diese Partie.' : 'Du verlässt diesen Spieltisch. Danach kannst du ein neues Duell starten.', () => { connection.leave(); reset(); });
 $('resign').onclick = () => confirm('Diese Partie aufgeben?', 'Dein Gegenüber gewinnt diese Runde. Ihr könnt danach direkt eine Revanche spielen.', () => connection.send({ type: 'resign' }));
 $('copy-link').onclick = async () => {
-  try { await navigator.clipboard.writeText($<HTMLInputElement>('invite-link').value); notify('Einladungslink kopiert. Schick ihn deinem Freund!'); }
+  try { await copyText($<HTMLInputElement>('invite-link').value); notify('Einladungslink kopiert. Schick ihn deinem Freund!'); }
   catch { $<HTMLInputElement>('invite-link').select(); notify('Der Link ist markiert. Kopiere ihn mit Strg+C oder über das Kontextmenü.'); }
 };
 function receive(message: ServerMessage) {
@@ -173,7 +201,7 @@ function receive(message: ServerMessage) {
     document.body.classList.add('in-room');
     const url = new URL(location.href); url.searchParams.set('room', message.room); history.replaceState({}, '', url);
     $('setup').hidden = true; $('room-panel').hidden = false; $('leave').hidden = false;
-    $<HTMLInputElement>('invite-link').value = url.href; $('room-code').textContent = message.room;
+    $<HTMLInputElement>('invite-link').value = invitationUrl(message.room); $('room-code').textContent = message.room;
   } else if (message.type === 'snapshot') {
     const previous = state; state = message.state; clockOffset = state.serverTime - Date.now(); movePending = false; clearTimeout(pendingMoveTimer);
     const moved = previous && state.round === previous.round && state.game.lastMove && state.game.revision > previous.game.revision;
@@ -657,4 +685,15 @@ document.addEventListener('keydown', event => {
 });
 renderBoard(demo.board); renderPlayers(); renderQueue(); renderHerd(); renderStatus(); scheduleLamaIdle();
 const invited = roomCode(location.href);
+void installNativeApp(async () => {
+  const dialog = document.querySelector<HTMLDialogElement>('dialog[open]');
+  if (dialog) dialog.close();
+  else if (fullscreen.active) await fullscreen.exit();
+  else if (state) $('leave').click();
+  else await minimizeNativeApp();
+}, active => {
+  audio.setEnabled(sound && active); music.setEnabled(musicEnabled && active);
+  if (!active) { cancelVisuals(); audio.cancel(); herdMotion.clear(); }
+  else { renderBoard(state?.game.board ?? demo.board); renderStatus(); herdMotion.refresh(); }
+}).catch(() => notify('Android-Steuerung konnte nicht vollständig geladen werden. Bitte die App neu öffnen.'));
 if (invited) { $<HTMLInputElement>('room-input').value = invited; if (!connection.resume(invited)) { notify('Du bist eingeladen! Gib deinen Namen ein und tritt dem Raum bei.'); $<HTMLInputElement>('name').focus(); } }

@@ -11,3 +11,6 @@ test-results/
 playwright-report/
 
 /.slide-updater/
+*.apk
+*.jks
+*.keystore
