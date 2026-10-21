@@ -3,7 +3,7 @@ import './retro.css';
 import './feedback.css';
 import './fullscreen.css';
 import { installFullscreen } from './fullscreen';
-import { installNativeApp, minimizeNativeApp, copyText } from './native-app';
+import { installNativeApp, minimizeNativeApp, copyText, shareInvitation } from './native-app';
 import { invitationUrl, isNativeApp, serverEndpoint, saveServer, validateInvitation } from './server-config';
 import { fruit, llama, arrow } from './art';
 import { GameAudio, GameMusic } from './sound';
@@ -51,7 +51,7 @@ app.innerHTML = `
   <div class="game-layout">
     <aside class="left-column">
       <section class="panel setup-panel" id="setup"><p class="eyebrow">GUT, DASS DU DA BIST</p><h3>Wer spielt mit?</h3><label for="name">Dein Name</label><input id="name" maxlength="20" autocomplete="nickname" placeholder="Zum Beispiel: Alex" value="${escape(storage.get('lama:name') ?? '')}"/><label for="turn-time">Zeit pro Zug</label><select id="turn-time"><option value="15">15 Sekunden · flott</option><option value="30" selected>30 Sekunden · entspannt</option><option value="60">60 Sekunden · mit Bedacht</option></select><button class="button primary" id="create">Freund einladen <span>↗</span></button><button class="button secondary" id="practice">Mit Paco üben <span>✧</span></button><div class="divider"><span>Du hast einen Raumcode?</span></div><form id="join-form"><label class="sr-only" for="room-input">Raumcode oder Einladungslink</label><div class="input-action"><input id="room-input" placeholder="Code oder Link" autocomplete="off"/><button type="submit" class="join-button" aria-label="Raum beitreten">${arrow('right')}</button></div></form><p class="small-note">Ohne Anmeldung. Direkt miteinander.</p></section>
-      <section class="panel room-panel" id="room-panel" hidden><p class="eyebrow">DEIN PRIVATER RAUM</p><h3 id="room-title">Ein Platz für zwei.</h3><label for="invite-link">Einladungslink</label><input id="invite-link" readonly/><button class="button secondary" id="copy-link">Link kopieren <span>⧉</span></button><p class="room-code">Raumcode <strong id="room-code"></strong></p><p class="small-note" id="room-help">Schicke den Link an einen Freund. Sobald ihr beide da seid, geht’s los.</p><div class="room-stats"><span>RUNDE <b id="round">1</b></span><span>SIEGE <b id="wins">0 : 0</b></span></div></section>
+      <section class="panel room-panel" id="room-panel" hidden><p class="eyebrow">DEIN PRIVATER RAUM</p><h3 id="room-title">Ein Platz für zwei.</h3><label for="invite-link">Einladungslink</label><input id="invite-link" readonly/><button class="button primary" id="share-link" hidden>Link teilen <span>&#8599;</span></button><button class="button secondary" id="copy-link">Link kopieren <span>⧉</span></button><p class="room-code">Raumcode <strong id="room-code"></strong></p><p class="small-note" id="room-help">Schicke den Link an einen Freund. Sobald ihr beide da seid, geht’s los.</p><div class="room-stats"><span>RUNDE <b id="round">1</b></span><span>SIEGE <b id="wins">0 : 0</b></span></div></section>
       <section class="panel points-panel"><div class="section-title"><h3>Jede Frucht zählt.</h3><span>3ER-REIHE</span></div><div class="points-grid">${TILES.map(t => `<div title="${tileName(t)}: ${TILE_INFO[t].points} Punkte">${fruit(t)}<strong>${TILE_INFO[t].points}</strong></div>`).join('')}</div><p>4 gleiche = <b>×2</b> · 5 gleiche = <b>×3</b><br/>Jede weitere Kaskade erhöht den Faktor.</p></section>
     </aside>
     <section class="arena" id="arena" aria-label="Spielfeld">
@@ -195,6 +195,16 @@ $('copy-link').onclick = async () => {
   try { await copyText($<HTMLInputElement>('invite-link').value); notify('Einladungslink kopiert. Schick ihn deinem Freund!'); }
   catch { $<HTMLInputElement>('invite-link').select(); notify('Der Link ist markiert. Kopiere ihn mit Strg+C oder über das Kontextmenü.'); }
 };
+$('share-link').onclick = async () => {
+  const button = $<HTMLButtonElement>('share-link');
+  button.disabled = true;
+  try { await shareInvitation($<HTMLInputElement>('invite-link').value); }
+  catch (error) {
+    if (!(error instanceof Error && /cancel|canceled|cancelled|abgebrochen/i.test(error.message))) {
+      notify('Teilen nicht möglich. Kopiere den Einladungslink und verschicke ihn direkt.');
+    }
+  } finally { button.disabled = false; }
+};
 function receive(message: ServerMessage) {
   if (message.type === 'welcome') {
     chatInitialized = false;
@@ -216,6 +226,7 @@ function receive(message: ServerMessage) {
     $('room-title').textContent = state.players[1]?.bot ? `${cpu.name} nimmt die Herausforderung an.` : 'Ein Platz für zwei.';
     $('room-help').textContent = state.players[1]?.bot ? cpu.description : 'Der Raum ist nur über euren Code erreichbar. Euer Chat bleibt am Spieltisch.';
     $('copy-link').hidden = !!state.players[1]?.bot;
+    $('share-link').hidden = !isNativeApp() || !!state.players[1]?.bot;
     $('invite-link').hidden = !!state.players[1]?.bot;
     document.querySelector<HTMLLabelElement>('label[for="invite-link"]')!.hidden = !!state.players[1]?.bot;
     $('room-code').parentElement!.hidden = !!state.players[1]?.bot;

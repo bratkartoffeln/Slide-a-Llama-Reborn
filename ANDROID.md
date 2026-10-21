@@ -7,7 +7,7 @@ Räume, Spielzüge und Chats.
 
 ## Installieren und spielen
 
-`Slide-a-Llama-0.1.16-debug.apk` aus dem GitHub-Release auf Android 7 oder neuer
+`Slide-a-Llama-0.1.17-debug.apk` aus dem GitHub-Release auf Android 7 oder neuer
 installieren. Android System WebView bzw. Chrome muss mindestens Version 107
 haben. Bei älteren Versionen erscheint ein lokaler Aktualisierungshinweis.
 
@@ -18,6 +18,10 @@ Buildvorgabe ändern. Die auf dem Gerät gespeicherte Auswahl hat Vorrang.
 Einladungslinks verwenden die öffentliche Serveradresse. Ein Link eines anderen
 Servers verlangt einen ausdrücklichen Serverwechsel; Sitzungstokens bleiben
 nach Server getrennt.
+
+Im privaten Raum öffnet **Link teilen** das Android-Teilen-Menü. Dort kannst du
+den Einladungslink beispielsweise über WhatsApp verschicken. **Link kopieren**
+bleibt als Alternative verfügbar. In CPU-Partien werden diese Aktionen ausgeblendet.
 
 **Vollbild** maximiert den Spieltisch passend zu Breite und Höhe, einschließlich
 Vorschau und Lamas. Unter Android blendet es auch die Systemleisten aus.
