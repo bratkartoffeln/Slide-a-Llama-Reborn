@@ -1,5 +1,15 @@
 import { isNativeApp } from './server-config';
 
+export async function shareInvitation(url: string) {
+  const { Share } = await import('@capacitor/share');
+  await Share.share({
+    title: 'Slide-a-Llama',
+    text: 'Spiel eine Runde Slide-a-Llama mit mir!',
+    url,
+    dialogTitle: 'Einladungslink teilen',
+  });
+}
+
 export async function copyText(text: string) {
   if (isNativeApp()) {
     const { Clipboard } = await import('@capacitor/clipboard');

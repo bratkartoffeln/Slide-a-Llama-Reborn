@@ -6,16 +6,20 @@ async function native(page: Page) {
     localStorage.setItem('lama:android:server', 'https://game.test:9443');
     localStorage.setItem('lama:motion', 'off'); localStorage.setItem('lama:music', 'off');
     const callbacks: Record<string, (data?: unknown) => void> = {};
-    const qa = { calls: [] as string[], copied: '', emit: (event: string, data?: unknown) => callbacks[event]?.(data) };
+    const qa = { calls: [] as string[], copied: '', shared: null as unknown, shareError: '', emit: (event: string, data?: unknown) => callbacks[event]?.(data) };
     (window as any).androidQA = qa;
     (window as any).androidBridge = { postMessage() {} };
     (window as any).Capacitor = {
-      PluginHeaders: ['App', 'Clipboard', 'SystemBars'].map(name => ({ name, methods:
-        (name === 'App' ? ['addListener', 'minimizeApp'] : name === 'Clipboard' ? ['write'] : ['show', 'hide'])
+      PluginHeaders: ['App', 'Clipboard', 'Share', 'SystemBars'].map(name => ({ name, methods:
+        (name === 'App' ? ['addListener', 'minimizeApp'] : name === 'Clipboard' ? ['write'] : name === 'Share' ? ['share'] : ['show', 'hide'])
           .map(name => ({ name, rtype: name === 'addListener' ? 'callback' : 'promise' })) })),
       async nativePromise(plugin: string, method: string, options: any = {}) {
         qa.calls.push(`${plugin}.${method}`);
         if (plugin === 'Clipboard') qa.copied = options.string;
+        if (plugin === 'Share') {
+          qa.shared = options;
+          if (qa.shareError) throw new Error(qa.shareError);
+        }
         return {};
       },
       nativeCallback(_plugin: string, _method: string, options: any, callback: (data?: unknown) => void) {
@@ -47,6 +51,20 @@ test('Bundled Android client shares rooms, moves and chat with a browser and han
   const room = (await app.locator('#room-code').textContent())!;
   const invitation = `https://game.test:9443/?room=${room}`;
   await expect(app.locator('#invite-link')).toHaveValue(invitation);
+  await app.locator('#share-link').click();
+  await expect.poll(() => app.evaluate(() => (window as any).androidQA.shared)).toEqual({
+    title: 'Slide-a-Llama', text: 'Spiel eine Runde Slide-a-Llama mit mir!',
+    url: invitation, dialogTitle: 'Einladungslink teilen',
+  });
+  await expect(app.locator('#share-link')).toBeEnabled();
+  await app.evaluate(() => { (window as any).androidQA.shareError = 'Share canceled'; });
+  await app.locator('#share-link').click();
+  await expect(app.locator('#share-link')).toBeEnabled();
+  await expect(app.locator('#toast')).toBeHidden();
+  await app.evaluate(() => { (window as any).androidQA.shareError = 'Unavailable'; });
+  await app.locator('#share-link').click();
+  await expect(app.locator('#toast')).toContainText('Teilen nicht möglich');
+  await expect(app.locator('#share-link')).toBeEnabled();
   await app.locator('#copy-link').click();
   await expect.poll(() => app.evaluate(() => (window as any).androidQA.copied)).toBe(invitation);
   const guestContext = await browser.newContext(); const guest = await guestContext.newPage();
